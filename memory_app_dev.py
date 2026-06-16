@@ -41,6 +41,10 @@ import datetime
 #Branch: main
 #File: app.py
 
+#app.pyを更新したい時（ローカルで作った変更をGithubに反映→streamlit更新トリガーまで）
+#git add . → git status → git commit -m "update memory app with streamlit changes"
+#→ git push
+
 #while 条件式：
     #条件式がTRUEの間繰り返される処理
 #while menu_action <= 1:

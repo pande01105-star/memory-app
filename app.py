@@ -21,9 +21,9 @@ def save_memories(memories):
 
 def add_memory(text):
     memories = load_memories()
-    import pytz
-    jst = pytz.timezone("Asia/Tokyo")
-    dt = datetime.datetime.now(jst)
+    from datetime import datetime, timezone, timedelta
+    JST = timezone(timedelta(hours=9))
+    dt = datetime.now(JST)
     memories.append(dt.strftime("%Y-%m-%d %H:%M:%S") + "|" + text + "\n")
     save_memories(memories)
 
