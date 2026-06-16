@@ -32,7 +32,7 @@ st.title("Memory App")
 
 menu = st.sidebar.selectbox(
     "メニュー",
-    ["追加", "一覧", "検索", "削除"]
+    ["追加", "一覧", "検索", "編集", "削除"]
 )
 
 # ---------- 追加 ----------
@@ -75,6 +75,35 @@ elif menu == "検索":
                 st.write(m)
         else:
             st.info("該当なし")
+
+# ---------- 編集 ----------
+elif menu == "編集":
+    st.subheader("メモ編集")
+
+    memories = load_memories()
+
+    if not memories:
+        st.info("編集できるメモがありません")
+    else:
+        for i, m in enumerate(memories):
+            st.write(f"{i}: {m}")
+
+        index = st.number_input("編集番号", step=1, min_value=0)
+        new_text = st.text_input("編集後の内容")
+
+        if st.button("編集"):
+            if 0 <= index < len(memories):
+                old_date = memories[int(index)].split("|", 1)[0]
+
+                if new_text.strip() == "":
+                    st.warning("空の内容には編集できません")
+                else:
+                    memories[int(index)] = old_date + "|" + new_text + "\n"
+                    save_memories(memories)
+                    st.success("編集しました")
+            else:
+                st.error("存在しない番号です") 
+
 
 # ---------- 削除 ----------
 elif menu == "削除":
