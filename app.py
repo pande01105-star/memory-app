@@ -22,8 +22,11 @@ def save_memories(memories):
 def add_memory(word, description):
     memories = load_memories()
     dt = datetime.now(JST)
+    date_text = dt.strftime("%Y-%m-%d %H:%M:%S")
+    base_date = dt.strftime("%Y-%m-%d")
+
     memories.append(
-        dt.strftime("%Y-%m-%d %H:%M:%S") + "|" + word + "|" + description + "\n")
+        date_text + "|" + word + "|" + description + "|" + base_date + "\n")
     save_memories(memories)
 
 # ---------- UI ----------
@@ -110,29 +113,64 @@ elif menu == "編集":
 
 # ---------- 復習 ----------
 elif menu == "復習":
-    st.subheader("復習")
+    st.subheader("今日の復習")
 
     memories = load_memories()
+    today = datetime.now(JST).date()
 
-    if not memories:
-        st.info("復習するメモがありません")
+    review_days = [1, 3, 7, 30]
+    review_cards = []
+
+    for index, memory in enumerate(memories):
+        parts = memory.strip().split("|")
+
+        if len(parts) >= 4:
+            created_at = parts[0]
+            word = parts[1]
+            description = parts[2]
+            base_date_text = parts[3]
+
+            base_date = datetime.strptime(base_date_text, "%Y-%m-%d").date()
+            days_passed = (today - base_date).days
+
+            if days_passed in review_days:
+                review_cards.append((index, word, description, days_passed))
+
+    if not review_cards:
+        st.info("今日復習するカードはありません")
     else:
-        for i, memory in enumerate(memories):
+        for i, card in enumerate(review_cards):
+            index = card[0]
+            word = card[1]
+            description = card[2]
+            days_passed = card[3]
 
-            parts = memory.strip().split("|")
+            st.write(f"問題 {i+1}")
+            st.write(f"復習サイクル開始から {days_passed} 日後")
+            st.write(f"単語：{word}")
 
-            if len(parts) >= 3:
-                date = parts[0]
-                word = parts[1]
-                description = parts[2]
+            if st.button("答えを見る", key=f"answer_{i}"):
+                st.write(f"説明：{description}")
 
-                st.write(f"問題 {i+1}")
-                st.write(f"単語：{word}")
+                col1, col2 = st.columns(2)
 
-                if st.button("答えを見る", key=f"answer_{i}"):
-                    st.write(f"説明：{description}")
+                with col1:
+                    if st.button("覚えてた", key=f"remember_{i}"):
+                        st.success("OK。次の復習タイミングまで保存します")
 
-                st.divider()
+                with col2:
+                    if st.button("忘れてた", key=f"forgot_{i}"):
+                        today_text = today.strftime("%Y-%m-%d")
+
+                        parts = memories[index].strip().split("|")
+                        parts[3] = today_text
+
+                        memories[index] = "|".join(parts) + "\n"
+                        save_memories(memories)
+
+                        st.warning("復習サイクルを今日からやり直します")
+
+            st.divider()
 
 # ---------- 削除 ----------
 elif menu == "削除":
