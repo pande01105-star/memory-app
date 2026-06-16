@@ -2,13 +2,7 @@ import streamlit as st
 import datetime
 from datetime import datetime, timezone, timedelta
 
-st.title("UPDATED VERSION 1654d98")
-
 JST = timezone(timedelta(hours=9))
-
-st.write("JST:", datetime.now(JST))
-st.write("NOW:", datetime.datetime.now())
-st.write("UTC:", datetime.datetime.utcnow())
 
 FILE_PATH = "memories_list"
 
