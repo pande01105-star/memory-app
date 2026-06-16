@@ -14,7 +14,32 @@ import datetime
 # w 中身を全て削除して上書きする
 # r+ w+ 読み込みと書き込みを同時に行う場合
 
+#gitリリースの本質→ ローカル　→ github → デプロイ
+#ターミナル上
+#cd ~/Desktop/python_lesson
 
+#git hub上
+#リポジトリを作成する→トークンを作成する（必要ならパスワードも）
+
+#ターミナル上
+#git init　git初期化
+#git add . ステージング
+#git commit -m "first streamlit memory app"　初回コミット
+#touch .gitignore　gitignoreは最初に作るのが理想
+#git add . 
+#git commit -m "clean project" 整理コミット
+#github連携↓
+#git remote add origin https://github.com/pande01105-star/memory-app.git
+#git branch -M main
+#git push -u origin main
+#エラー：remote already exists → git remote set-url origin URL
+#競合エラー → git push -u origin main --force
+
+#ストリームリット上
+#https://streamlit.io/cloud
+#Repository: pande01105-star/memory-app
+#Branch: main
+#File: app.py
 
 #while 条件式：
     #条件式がTRUEの間繰り返される処理

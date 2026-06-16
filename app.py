@@ -1,50 +1,99 @@
 import streamlit as st
 import datetime
 
+st.write("NOW:", datetime.datetime.now())
+st.write("UTC:", datetime.datetime.utcnow())
+
+FILE_PATH = "memories_list"
+
+# ---------- データ処理 ----------
 def load_memories():
     try:
-        with open("memories_list", "r", encoding="utf-8") as f:
+        with open(FILE_PATH, "r", encoding="utf-8") as f:
             return f.readlines()
     except FileNotFoundError:
         return []
 
 def save_memories(memories):
-    with open("memories_list", "w", encoding="utf-8") as f:
+    with open(FILE_PATH, "w", encoding="utf-8") as f:
         for m in memories:
             f.write(m)
 
 def add_memory(text):
     memories = load_memories()
-    dt = datetime.datetime.now()
+    import pytz
+    jst = pytz.timezone("Asia/Tokyo")
+    dt = datetime.datetime.now(jst)
     memories.append(dt.strftime("%Y-%m-%d %H:%M:%S") + "|" + text + "\n")
     save_memories(memories)
 
-# UI
+# ---------- UI ----------
 st.title("Memory App")
 
-menu = st.selectbox("メニュー", ["追加", "一覧", "削除"])
+menu = st.sidebar.selectbox(
+    "メニュー",
+    ["追加", "一覧", "検索", "削除"]
+)
 
+# ---------- 追加 ----------
 if menu == "追加":
-    text = st.text_input("メモ")
+    st.subheader("メモ追加")
+
+    text = st.text_input("メモ内容")
+
     if st.button("保存"):
-        if text != "":
+        if text.strip() == "":
+            st.warning("空のメモは保存できません")
+        else:
             add_memory(text)
-            st.success("保存した")
+            st.success("保存しました")
 
+# ---------- 一覧 ----------
 elif menu == "一覧":
-    memories = load_memories()
-    for i, m in enumerate(memories):
-        st.text(f"{i}: {m}")
+    st.subheader("メモ一覧")
 
+    memories = load_memories()
+
+    if not memories:
+        st.info("メモがありません")
+    else:
+        for i, m in enumerate(memories):
+            st.write(f"{i}: {m}")
+
+# ---------- 検索 ----------
+elif menu == "検索":
+    st.subheader("メモ検索")
+
+    keyword = st.text_input("キーワード")
+
+    if keyword:
+        memories = load_memories()
+        results = [m for m in memories if keyword in m]
+
+        if results:
+            for i, m in enumerate(results):
+                st.write(m)
+        else:
+            st.info("該当なし")
+
+# ---------- 削除 ----------
 elif menu == "削除":
+    st.subheader("メモ削除")
+
     memories = load_memories()
-    for i, m in enumerate(memories):
-        st.text(f"{i}: {m}")
 
-    index = st.number_input("削除番号", step=1)
+    if not memories:
+        st.info("削除できるメモがありません")
+    else:
+        for i, m in enumerate(memories):
+            st.write(f"{i}: {m}")
 
-    if st.button("削除"):
-        if 0 <= index < len(memories):
-            memories.pop(int(index))
-            save_memories(memories)
-            st.success("削除した")
+        index = st.number_input("削除番号", step=1, min_value=0)
+
+        if st.button("削除"):
+            if 0 <= index < len(memories):
+                removed = memories.pop(int(index))
+                save_memories(memories)
+                st.success(f"削除しました: {removed}")
+            else:
+                st.error("存在しない番号です")
