@@ -7,6 +7,11 @@ JST = timezone(timedelta(hours=9))
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
+if "access_token" in st.session_state and "refresh_token" in st.session_state:
+    supabase.auth.set_session(
+        st.session_state.access_token,
+        st.session_state.refresh_token
+    )
 
 # ---------- データ処理 ----------
 def sign_up(email, password):
@@ -83,8 +88,14 @@ if st.session_state.user is None:
                 st.warning("メールアドレスとパスワードを入力してください")
             else:
                 try:
-                    response = sign_up(email, password)
-                    st.success("登録しました。メール確認が必要な場合はメールを確認してください。")
+                    response = sign_in(email, password)
+
+                    st.session_state.user = response.user
+                    st.session_state.access_token = response.session.access_token
+                    st.session_state.refresh_token = response.session.refresh_token
+
+                    st.success("ログインしました")
+                    st.rerun()
                 except Exception as e:
                     st.error("登録に失敗しました")
                     st.write(e)
@@ -110,6 +121,8 @@ st.sidebar.write(f"ログイン中: {st.session_state.user.email}")
 if st.sidebar.button("ログアウト"):
     sign_out()
     st.session_state.user = None
+    st.session_state.access_token = None
+    st.session_state.refresh_token = None
     st.rerun()
 
 menu = st.sidebar.selectbox(
