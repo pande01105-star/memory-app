@@ -14,7 +14,6 @@ if "access_token" in st.session_state and st.session_state.access_token:
         st.session_state.refresh_token
     )
     supabase.postgrest.auth(st.session_state.access_token)
-    )
 
 # ---------- データ処理 ----------
 def sign_up(email, password):
@@ -91,7 +90,7 @@ if st.session_state.user is None:
                 st.warning("メールアドレスとパスワードを入力してください")
             else:
                 try:
-                    response = sign_in(email, password)
+                    response = sign_up(email, password)
 
                     st.session_state.user = response.user
                     st.session_state.access_token = response.session.access_token
@@ -117,7 +116,18 @@ if st.session_state.user is None:
             else:
                 try:
                     response = sign_in(email, password)
+
                     st.session_state.user = response.user
+                    st.session_state.access_token = response.session.access_token
+                    st.session_state.refresh_token = response.session.refresh_token
+
+                    supabase.auth.set_session(
+                        st.session_state.access_token,
+                        st.session_state.refresh_token
+                    )
+
+                    supabase.postgrest.auth(st.session_state.access_token)
+
                     st.success("ログインしました")
                     st.rerun()
                 except Exception as e:
