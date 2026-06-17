@@ -7,10 +7,13 @@ JST = timezone(timedelta(hours=9))
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
-if "access_token" in st.session_state and "refresh_token" in st.session_state:
+
+if "access_token" in st.session_state and st.session_state.access_token:
     supabase.auth.set_session(
         st.session_state.access_token,
         st.session_state.refresh_token
+    )
+    supabase.postgrest.auth(st.session_state.access_token)
     )
 
 # ---------- データ処理 ----------
@@ -93,6 +96,13 @@ if st.session_state.user is None:
                     st.session_state.user = response.user
                     st.session_state.access_token = response.session.access_token
                     st.session_state.refresh_token = response.session.refresh_token
+
+                    supabase.auth.set_session(
+                        st.session_state.access_token,
+                        st.session_state.refresh_token
+                    )
+
+                    supabase.postgrest.auth(st.session_state.access_token)
 
                     st.success("ログインしました")
                     st.rerun()
