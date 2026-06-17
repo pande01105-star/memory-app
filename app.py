@@ -53,11 +53,18 @@ menu = st.sidebar.selectbox(
 )
 
 # ---------- 追加 ----------
+# ---------- 追加 ----------
 if menu == "追加":
     st.subheader("メモ追加")
 
-    word = st.text_input("単語")
-    description = st.text_area("説明")
+    if "word_input" not in st.session_state:
+        st.session_state.word_input = ""
+
+    if "description_input" not in st.session_state:
+        st.session_state.description_input = ""
+
+    word = st.text_input("単語", key="word_input")
+    description = st.text_area("説明", key="description_input")
 
     if st.button("保存"):
         if word.strip() == "" or description.strip() == "":
@@ -65,6 +72,11 @@ if menu == "追加":
         else:
             add_memory(word, description)
             st.success("保存しました")
+
+            st.session_state.word_input = ""
+            st.session_state.description_input = ""
+
+            st.rerun()
 
 # ---------- 一覧 ----------
 elif menu == "一覧":
