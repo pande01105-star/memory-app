@@ -23,22 +23,31 @@ def load_memories():
     )
     return response.data
 
-def save_memories(memories):
-    with open(FILE_PATH, "w", encoding="utf-8") as f:
-        for m in memories:
-            f.write(m)
-
 def add_memory(word, description):
     dt = datetime.now(JST)
-    date_text = dt.strftime("%Y-%m-%d %H:%M:%S")
-    base_date = dt.strftime("%Y-%m-%d")
 
     supabase.table("memories").insert({
-        "created_at": date_text,
+        "created_at": dt.strftime("%Y-%m-%d %H:%M:%S"),
         "word": word,
         "description": description,
-        "base_date": base_date
+        "base_date": dt.strftime("%Y-%m-%d")
     }).execute()
+
+def update_memory(memory_id, word, description):
+    supabase.table("memories").update({
+        "word": word,
+        "description": description
+    }).eq("id", memory_id).execute()
+
+def delete_memory(memory_id):
+    supabase.table("memories").delete().eq("id", memory_id).execute()
+
+def reset_review_cycle(memory_id):
+    today_text = datetime.now(JST).strftime("%Y-%m-%d")
+
+    supabase.table("memories").update({
+        "base_date": today_text
+    }).eq("id", memory_id).execute()
 
 # ---------- UI ----------
 st.title("Memory App")
@@ -72,8 +81,9 @@ elif menu == "一覧":
         st.info("メモがありません")
     else:
         for i, m in enumerate(memories):
-            st.write(f"{i}: {m['created_at']} | {m['word']} | {m['description']}")
-
+            st.write(
+                f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
+            )
 # ---------- 検索 ----------
 elif menu == "検索":
     st.subheader("メモ検索")
@@ -89,7 +99,9 @@ elif menu == "検索":
 
         if results:
             for i, m in enumerate(results):
-                st.write(f"{i}: {m['created_at']} | {m['word']} | {m['description']}")
+                st.write(
+                    f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
+                )
         else:
             st.info("該当なし")
 
@@ -103,7 +115,9 @@ elif menu == "編集":
         st.info("編集できるメモがありません")
     else:
         for i, m in enumerate(memories):
-            st.write(f"{i}: {m}")
+            st.write(
+                f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
+            )
 
         index = st.number_input("編集番号", step=1, min_value=0)
 
@@ -112,19 +126,14 @@ elif menu == "編集":
 
         if st.button("編集"):
             if 0 <= index < len(memories):
-                old_date = memories[int(index)].split("|", 1)[0]
-
                 if new_word.strip() == "" or new_description.strip() == "":
                     st.warning("単語と説明の両方を入力してください")
                 else:
-                    memories[int(index)] = (
-                        old_date + "|" + new_word + "|" + new_description + "\n"
-                    )
-                    save_memories(memories)
+                    memory_id = memories[int(index)]["id"]
+                    update_memory(memory_id, new_word, new_description)
                     st.success("編集しました")
             else:
                 st.error("存在しない番号です")
-
 # ---------- 復習 ----------
 elif menu == "復習":
     st.subheader("今日の復習")
@@ -153,14 +162,16 @@ elif menu == "復習":
             if st.button("答えを見る", key=f"answer_{m['id']}"):
                 st.write(f"説明：{m['description']}")
 
-                if st.button("忘れてた", key=f"forgot_{m['id']}"):
-                    today_text = today.strftime("%Y-%m-%d")
+                col1, col2 = st.columns(2)
 
-                    supabase.table("memories").update({
-                        "base_date": today_text
-                    }).eq("id", m["id"]).execute()
+                with col1:
+                    if st.button("覚えてた", key=f"remember_{m['id']}"):
+                        st.success("OK。次の復習タイミングまで保存します")
 
-                    st.warning("復習サイクルを今日からやり直します")
+                with col2:
+                    if st.button("忘れてた", key=f"forgot_{m['id']}"):
+                        reset_review_cycle(m["id"])
+                        st.warning("復習サイクルを今日からやり直します")
 
             st.divider()
 
@@ -174,14 +185,16 @@ elif menu == "削除":
         st.info("削除できるメモがありません")
     else:
         for i, m in enumerate(memories):
-            st.write(f"{i}: {m}")
+            st.write(
+                f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
+            )
 
         index = st.number_input("削除番号", step=1, min_value=0)
 
         if st.button("削除"):
             if 0 <= index < len(memories):
-                removed = memories.pop(int(index))
-                save_memories(memories)
-                st.success(f"削除しました: {removed}")
+                memory_id = memories[int(index)]["id"]
+                delete_memory(memory_id)
+                st.success("削除しました")
             else:
                 st.error("存在しない番号です")
