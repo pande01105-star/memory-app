@@ -1,6 +1,13 @@
 import streamlit as st
 import datetime
 from datetime import datetime, timezone, timedelta
+from supabase import create_client
+
+JST = timezone(timedelta(hours=9))
+
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
 
 JST = timezone(timedelta(hours=9))
 
@@ -8,11 +15,13 @@ FILE_PATH = "memories_list"
 
 # ---------- データ処理 ----------
 def load_memories():
-    try:
-        with open(FILE_PATH, "r", encoding="utf-8") as f:
-            return f.readlines()
-    except FileNotFoundError:
-        return []
+    response = (
+        supabase.table("memories")
+        .select("*")
+        .order("id")
+        .execute()
+    )
+    return response.data
 
 def save_memories(memories):
     with open(FILE_PATH, "w", encoding="utf-8") as f:
@@ -20,14 +29,16 @@ def save_memories(memories):
             f.write(m)
 
 def add_memory(word, description):
-    memories = load_memories()
     dt = datetime.now(JST)
     date_text = dt.strftime("%Y-%m-%d %H:%M:%S")
     base_date = dt.strftime("%Y-%m-%d")
 
-    memories.append(
-        date_text + "|" + word + "|" + description + "|" + base_date + "\n")
-    save_memories(memories)
+    supabase.table("memories").insert({
+        "created_at": date_text,
+        "word": word,
+        "description": description,
+        "base_date": base_date
+    }).execute()
 
 # ---------- UI ----------
 st.title("Memory App")
@@ -61,7 +72,7 @@ elif menu == "一覧":
         st.info("メモがありません")
     else:
         for i, m in enumerate(memories):
-            st.write(f"{i}: {m}")
+            st.write(f"{i}: {m['created_at']} | {m['word']} | {m['description']}")
 
 # ---------- 検索 ----------
 elif menu == "検索":
@@ -71,11 +82,14 @@ elif menu == "検索":
 
     if keyword:
         memories = load_memories()
-        results = [m for m in memories if keyword in m]
+        results = [
+            m for m in memories
+            if keyword in m["word"] or keyword in m["description"]
+        ]
 
         if results:
             for i, m in enumerate(results):
-                st.write(m)
+                st.write(f"{i}: {m['created_at']} | {m['word']} | {m['description']}")
         else:
             st.info("該当なし")
 
@@ -121,54 +135,32 @@ elif menu == "復習":
     review_days = [1, 3, 7, 30]
     review_cards = []
 
-    for index, memory in enumerate(memories):
-        parts = memory.strip().split("|")
+    for m in memories:
+        base_date = datetime.strptime(m["base_date"], "%Y-%m-%d").date()
+        days_passed = (today - base_date).days
 
-        if len(parts) >= 4:
-            created_at = parts[0]
-            word = parts[1]
-            description = parts[2]
-            base_date_text = parts[3]
-
-            base_date = datetime.strptime(base_date_text, "%Y-%m-%d").date()
-            days_passed = (today - base_date).days
-
-            if days_passed in review_days:
-                review_cards.append((index, word, description, days_passed))
+        if days_passed in review_days:
+            review_cards.append(m | {"days_passed": days_passed})
 
     if not review_cards:
         st.info("今日復習するカードはありません")
     else:
-        for i, card in enumerate(review_cards):
-            index = card[0]
-            word = card[1]
-            description = card[2]
-            days_passed = card[3]
-
+        for i, m in enumerate(review_cards):
             st.write(f"問題 {i+1}")
-            st.write(f"復習サイクル開始から {days_passed} 日後")
-            st.write(f"単語：{word}")
+            st.write(f"復習サイクル開始から {m['days_passed']} 日後")
+            st.write(f"単語：{m['word']}")
 
-            if st.button("答えを見る", key=f"answer_{i}"):
-                st.write(f"説明：{description}")
+            if st.button("答えを見る", key=f"answer_{m['id']}"):
+                st.write(f"説明：{m['description']}")
 
-                col1, col2 = st.columns(2)
+                if st.button("忘れてた", key=f"forgot_{m['id']}"):
+                    today_text = today.strftime("%Y-%m-%d")
 
-                with col1:
-                    if st.button("覚えてた", key=f"remember_{i}"):
-                        st.success("OK。次の復習タイミングまで保存します")
+                    supabase.table("memories").update({
+                        "base_date": today_text
+                    }).eq("id", m["id"]).execute()
 
-                with col2:
-                    if st.button("忘れてた", key=f"forgot_{i}"):
-                        today_text = today.strftime("%Y-%m-%d")
-
-                        parts = memories[index].strip().split("|")
-                        parts[3] = today_text
-
-                        memories[index] = "|".join(parts) + "\n"
-                        save_memories(memories)
-
-                        st.warning("復習サイクルを今日からやり直します")
+                    st.warning("復習サイクルを今日からやり直します")
 
             st.divider()
 
