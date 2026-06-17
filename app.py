@@ -9,10 +9,28 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 # ---------- データ処理 ----------
+def sign_up(email, password):
+    return supabase.auth.sign_up({
+        "email": email,
+        "password": password
+    })
+
+def sign_in(email, password):
+    return supabase.auth.sign_in_with_password({
+        "email": email,
+        "password": password
+    })
+
+def sign_out():
+    supabase.auth.sign_out()
+
 def load_memories():
+    user_id = st.session_state.user.id
+
     response = (
         supabase.table("memories")
         .select("*")
+        .eq("user_id", user_id)
         .order("id")
         .execute()
     )
@@ -20,12 +38,14 @@ def load_memories():
 
 def add_memory(word, description):
     dt = datetime.now(JST)
+    user_id = st.session_state.user.id
 
     supabase.table("memories").insert({
         "created_at": dt.strftime("%Y-%m-%d %H:%M:%S"),
         "word": word,
         "description": description,
-        "base_date": dt.strftime("%Y-%m-%d")
+        "base_date": dt.strftime("%Y-%m-%d"),
+        "user_id": user_id
     }).execute()
 
 def update_memory(memory_id, word, description):
@@ -45,7 +65,52 @@ def reset_review_cycle(memory_id):
     }).eq("id", memory_id).execute()
 
 # ---------- UI ----------
+if "user" not in st.session_state:
+    st.session_state.user = None
+
 st.title("Memory App")
+if st.session_state.user is None:
+    st.subheader("ログイン / 新規登録")
+
+    auth_menu = st.radio("選択", ["ログイン", "新規登録"])
+
+    email = st.text_input("メールアドレス")
+    password = st.text_input("パスワード", type="password")
+
+    if auth_menu == "新規登録":
+        if st.button("新規登録"):
+            if email.strip() == "" or password.strip() == "":
+                st.warning("メールアドレスとパスワードを入力してください")
+            else:
+                try:
+                    response = sign_up(email, password)
+                    st.success("登録しました。メール確認が必要な場合はメールを確認してください。")
+                except Exception as e:
+                    st.error("登録に失敗しました")
+                    st.write(e)
+
+    else:
+        if st.button("ログイン"):
+            if email.strip() == "" or password.strip() == "":
+                st.warning("メールアドレスとパスワードを入力してください")
+            else:
+                try:
+                    response = sign_in(email, password)
+                    st.session_state.user = response.user
+                    st.success("ログインしました")
+                    st.rerun()
+                except Exception as e:
+                    st.error("ログインに失敗しました")
+                    st.write(e)
+
+    st.stop()
+
+st.sidebar.write(f"ログイン中: {st.session_state.user.email}")
+
+if st.sidebar.button("ログアウト"):
+    sign_out()
+    st.session_state.user = None
+    st.rerun()
 
 menu = st.sidebar.selectbox(
     "メニュー",
