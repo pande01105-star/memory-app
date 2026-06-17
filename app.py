@@ -1,5 +1,4 @@
 import streamlit as st
-import datetime
 from datetime import datetime, timezone, timedelta
 from supabase import create_client
 
@@ -8,10 +7,6 @@ JST = timezone(timedelta(hours=9))
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
-
-JST = timezone(timedelta(hours=9))
-
-FILE_PATH = "memories_list"
 
 # ---------- データ処理 ----------
 def load_memories():
