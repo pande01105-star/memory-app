@@ -45,6 +45,33 @@ import datetime
 #git add . → git status → git commit -m "update memory app with streamlit changes"
 #→ git push
 
+#進行状況
+プロジェクト名:
+Memory App
+
+現在実装済み
+
+✅ ログイン
+✅ ユーザー分離
+✅ RLS
+✅ タグ
+✅ 重要度
+✅ カードUI
+✅ タグ検索
+✅ 復習機能
+✅ review_logs
+✅ 統計画面
+
+次の実装予定
+
+① AI要約
+② AIクイズ生成
+③ 通知
+④ 復習カレンダー
+⑤ タグ管理画面
+⑥ モバイル最適化
+⑦ Android/iPhone公開
+
 #while 条件式：
     #条件式がTRUEの間繰り返される処理
 #while menu_action <= 1:

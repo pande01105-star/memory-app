@@ -1,6 +1,11 @@
 import streamlit as st
 from datetime import datetime, timezone, timedelta
 from supabase import create_client
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=st.secrets["OPENAI_API_KEY"]
+)
 
 JST = timezone(timedelta(hours=9))
 
@@ -111,6 +116,31 @@ def load_review_logs():
     )
     return response.data
 
+def summarize_memory(word, description):
+    prompt = f"""
+次の学習メモを、復習しやすい形に要約してください。
+
+条件:
+- 日本語
+- 3〜5行
+- 重要ポイントを残す
+- 難しい言葉は少しやさしくする
+- 余計な前置きは不要
+
+単語:
+{word}
+
+説明:
+{description}
+"""
+
+    response = openai_client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
+    )
+
+    return response.output_text.strip()
+
 # ---------- UI ----------
 st.title("Memory App")
 if st.session_state.user is None:
@@ -184,7 +214,7 @@ if st.sidebar.button("ログアウト"):
 
 menu = st.sidebar.selectbox(
     "メニュー",
-    ["追加", "一覧", "検索", "復習", "統計", "編集", "削除"]
+    ["追加", "一覧", "検索", "復習", "統計", "AI要約", "編集", "削除"]
 )
 
 # ---------- 追加 ----------
@@ -431,6 +461,58 @@ elif menu == "統計":
             if (m.get("importance") or 3) == level
         ])
         st.write(f"⭐{level}: {count}件")
+
+
+# ---------- AI要約 ----------
+elif menu == "AI要約":
+    st.subheader("AI要約")
+
+    memories = load_memories()
+
+    if not memories:
+        st.info("要約できるメモがありません")
+    else:
+        for i, m in enumerate(memories):
+            st.write(
+                f"{i}: ⭐{m.get('importance') or 3} | {m['word']} | タグ: {m.get('tags') or 'なし'}"
+            )
+
+        index = st.number_input(
+            "要約する番号",
+            step=1,
+            min_value=0,
+            max_value=len(memories) - 1
+        )
+
+        target = memories[int(index)]
+
+        st.markdown("### 元の説明")
+        st.write(target["description"])
+
+        if st.button("AIで要約する"):
+            with st.spinner("AIが要約中..."):
+                summary = summarize_memory(
+                    target["word"],
+                    target["description"]
+                )
+
+            st.session_state.ai_summary = summary
+
+        if "ai_summary" in st.session_state:
+            st.markdown("### AI要約結果")
+            st.write(st.session_state.ai_summary)
+
+            if st.button("この要約で説明を更新する"):
+                update_memory(
+                    target["id"],
+                    target["word"],
+                    st.session_state.ai_summary,
+                    target.get("tags") or "",
+                    target.get("importance") or 3
+                )
+                del st.session_state.ai_summary
+                st.success("説明をAI要約に更新しました")
+                st.rerun()
 
 # ---------- 削除 ----------
 elif menu == "削除":
