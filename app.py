@@ -99,6 +99,18 @@ def add_review_log(memory_id, result):
         "result": result
     }).execute()
 
+def load_review_logs():
+    user_id = st.session_state.user.id
+
+    response = (
+        supabase.table("review_logs")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("id")
+        .execute()
+    )
+    return response.data
+
 # ---------- UI ----------
 st.title("Memory App")
 if st.session_state.user is None:
@@ -172,7 +184,7 @@ if st.sidebar.button("ログアウト"):
 
 menu = st.sidebar.selectbox(
     "メニュー",
-    ["追加", "一覧", "検索", "復習", "編集", "削除"]
+    ["追加", "一覧", "検索", "復習", "統計", "編集", "削除"]
 )
 
 # ---------- 追加 ----------
@@ -376,6 +388,49 @@ elif menu == "復習":
                             st.session_state[show_key] = False
                             st.warning("復習サイクルを今日からやり直します")
                             st.rerun()
+
+# ---------- 統計 ----------
+elif menu == "統計":
+    st.subheader("学習統計")
+
+    memories = load_memories()
+    logs = load_review_logs()
+
+    total_memories = len(memories)
+    total_reviews = len(logs)
+
+    remembered_count = len([log for log in logs if log["result"] == "remembered"])
+    forgot_count = len([log for log in logs if log["result"] == "forgot"])
+
+    if total_reviews > 0:
+        remember_rate = remembered_count / total_reviews * 100
+    else:
+        remember_rate = 0
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("総メモ数", total_memories)
+    col2.metric("総復習回数", total_reviews)
+    col3.metric("正答率", f"{remember_rate:.1f}%")
+
+    st.divider()
+
+    st.write("### 復習結果")
+
+    col1, col2 = st.columns(2)
+    col1.metric("覚えてた", remembered_count)
+    col2.metric("忘れてた", forgot_count)
+
+    st.divider()
+
+    st.write("### 重要度別メモ数")
+
+    for level in range(1, 6):
+        count = len([
+            m for m in memories
+            if (m.get("importance") or 3) == level
+        ])
+        st.write(f"⭐{level}: {count}件")
 
 # ---------- 削除 ----------
 elif menu == "削除":
