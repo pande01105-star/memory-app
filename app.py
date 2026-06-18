@@ -339,6 +339,11 @@ elif menu == "復習":
         st.info("今日復習するカードはありません")
     else:
         for i, m in enumerate(review_cards):
+            show_key = f"show_answer_{m['id']}"
+
+            if show_key not in st.session_state:
+                st.session_state[show_key] = False
+
             with st.container(border=True):
                 st.markdown(f"### 問題 {i+1}")
                 st.caption(
@@ -350,6 +355,9 @@ elif menu == "復習":
                 st.markdown(f"## {m['word']}")
 
                 if st.button("答えを見る", key=f"answer_{m['id']}"):
+                    st.session_state[show_key] = True
+
+                if st.session_state[show_key]:
                     st.write(m["description"])
 
                     col1, col2 = st.columns(2)
@@ -357,13 +365,17 @@ elif menu == "復習":
                     with col1:
                         if st.button("覚えてた", key=f"remember_{m['id']}"):
                             add_review_log(m["id"], "remembered")
-                            st.success("OK。次の復習タイミングまで保存します")
+                            st.session_state[show_key] = False
+                            st.success("OK。復習履歴に記録しました")
+                            st.rerun()
 
                     with col2:
                         if st.button("忘れてた", key=f"forgot_{m['id']}"):
                             add_review_log(m["id"], "forgot")
                             reset_review_cycle(m["id"])
+                            st.session_state[show_key] = False
                             st.warning("復習サイクルを今日からやり直します")
+                            st.rerun()
 
 # ---------- 削除 ----------
 elif menu == "削除":
