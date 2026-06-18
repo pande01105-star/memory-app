@@ -85,12 +85,12 @@ def update_memory(memory_id, word, description, tags, importance):
         "importance": importance
     }).eq("id", memory_id).execute()
 
-def update_memory_ai(memory_id, ai_data):
+def update_memory_ai(memory_id, ai_data, user_one_line):
     supabase.table("memories").update({
         "ai_understanding": ai_data.get("understanding", ""),
         "ai_example": ai_data.get("example", ""),
         "ai_extra": ai_data.get("extra", ""),
-        "ai_one_line": ai_data.get("one_line", ""),
+        "ai_one_line": user_one_line,
         "ai_question": ai_data.get("question", "")
     }).eq("id", memory_id).execute()
 
@@ -141,7 +141,6 @@ JSON形式:
   "understanding": "意味がわかる説明",
   "example": "身近な例え話",
   "extra": "理解を助ける補足知識",
-  "one_line": "自分の言葉で覚える1行",
   "question": "復習時に思い出すための問い"
 }}
 
@@ -152,6 +151,8 @@ JSON形式:
 - 周辺知識も少し補足する
 - 難しすぎる専門語は避ける
 - ただし内容を雑にしない
+- 思い出す問いには、単語そのものを含めない
+- one_line は作らない。ユーザー自身が入力する
 
 単語:
 {word}
@@ -294,11 +295,22 @@ if menu == "追加":
 
         col1, col2 = st.columns(2)
 
+        user_one_line = st.text_input(
+            "自分の言葉で1行化",
+            placeholder="例：重要な部分だけに注目して判断する仕組み",
+            key="user_one_line_input"
+        )
+
+        st.session_state.user_one_line = user_one_line
+
         with col1:
             if st.button("理解カードを採用"):
-                st.session_state.use_ai_data = True
-                st.session_state.ai_card_adopted = True
-                st.rerun()
+                if st.session_state.user_one_line.strip() == "":
+                    st.warning("自分の言葉で1行化を入力してください")
+                else:
+                    st.session_state.use_ai_data = True
+                    st.session_state.ai_card_adopted = True
+                    st.rerun()
 
         with col2:
             if st.button("理解カードを破棄"):
@@ -330,12 +342,17 @@ if menu == "追加":
             if st.session_state.get("use_ai_data"):
                 memories = load_memories()
                 latest_memory = memories[-1]
-                update_memory_ai(latest_memory["id"], st.session_state.ai_data)
+                update_memory_ai(
+                    latest_memory["id"],
+                    st.session_state.ai_data,
+                    st.session_state.user_one_line
+                )
 
             st.success("保存しました")
             st.session_state.pop("ai_data", None)
             st.session_state.pop("use_ai_data", None)
             st.session_state.pop("ai_card_adopted", None)
+            st.session_state.pop("user_one_line", None)
 
             st.session_state.clear_count += 1
             st.rerun()
