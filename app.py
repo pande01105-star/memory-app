@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime, timezone, timedelta
 from supabase import create_client
+import json
 from openai import OpenAI
 
 openai_client = OpenAI(
@@ -84,6 +85,15 @@ def update_memory(memory_id, word, description, tags, importance):
         "importance": importance
     }).eq("id", memory_id).execute()
 
+def update_memory_ai(memory_id, ai_data):
+    supabase.table("memories").update({
+        "ai_understanding": ai_data.get("understanding", ""),
+        "ai_example": ai_data.get("example", ""),
+        "ai_extra": ai_data.get("extra", ""),
+        "ai_one_line": ai_data.get("one_line", ""),
+        "ai_question": ai_data.get("question", "")
+    }).eq("id", memory_id).execute()
+
 def delete_memory(memory_id):
     supabase.table("memories").delete().eq("id", memory_id).execute()
 
@@ -123,32 +133,25 @@ def summarize_memory(word, description):
 
 次のメモを、丸暗記ではなく理解して思い出せる形に変換してください。
 
+必ずJSONだけで返してください。
+説明文やコードブロックは不要です。
+
+JSON形式:
+{{
+  "understanding": "意味がわかる説明",
+  "example": "身近な例え話",
+  "extra": "理解を助ける補足知識",
+  "one_line": "自分の言葉で覚える1行",
+  "question": "復習時に思い出すための問い"
+}}
+
 条件:
 - 日本語
 - 単なる短い要約にしない
 - 例え話を必ず入れる
 - 周辺知識も少し補足する
-- 最後に「自分の言葉で覚える1行」を作る
-- 復習時に思い出すための問いも作る
 - 難しすぎる専門語は避ける
 - ただし内容を雑にしない
-
-出力形式:
-
-【理解】
-ここに、意味がわかる説明を書く。
-
-【例え話】
-身近な例えで説明する。
-
-【補足】
-理解を助ける周辺知識を書く。
-
-【自分の言葉で1行】
-一言で思い出せる形にする。
-
-【思い出す問い】
-復習時に自分へ出す質問を書く。
 
 単語:
 {word}
@@ -162,7 +165,8 @@ def summarize_memory(word, description):
         input=prompt
     )
 
-    return response.output_text.strip()
+    text = response.output_text.strip()
+    return json.loads(text)
 
 # ---------- UI ----------
 st.title("Memory App")
@@ -256,29 +260,45 @@ if menu == "追加":
         "説明",
         key=f"description_input_{st.session_state.clear_count}"
     )
-    if st.button("AIで説明を整える"):
+    if st.button("理解カードを作る"):
         if word.strip() == "" or description.strip() == "":
             st.warning("単語と説明を入力してから使ってください")
         else:
             with st.spinner("AIが説明を整えています..."):
-                ai_description = summarize_memory(word, description)
+                ai_data = summarize_memory(word, description)
 
-            st.session_state.ai_description = ai_description
+                st.session_state.ai_data = ai_data
     
-    if "ai_description" in st.session_state:
-        st.markdown("### AI提案")
-        st.write(st.session_state.ai_description)
+    if "ai_data" in st.session_state:
+        st.markdown("### AI理解カード")
+
+        ai_data = st.session_state.ai_data
+
+        st.write("#### 【理解】")
+        st.write(ai_data.get("understanding", ""))
+
+        st.write("#### 【例え話】")
+        st.write(ai_data.get("example", ""))
+
+        st.write("#### 【補足】")
+        st.write(ai_data.get("extra", ""))
+
+        st.write("#### 【自分の言葉で1行】")
+        st.write(ai_data.get("one_line", ""))
+
+        st.write("#### 【思い出す問い】")
+        st.write(ai_data.get("question", ""))
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("AI提案を採用"):
-                st.session_state.use_ai_description = True
+            if st.button("理解カードを採用"):
+                st.session_state.use_ai_data = True
                 st.rerun()
 
         with col2:
-            if st.button("AI提案を破棄"):
-                del st.session_state.ai_description
+            if st.button("理解カードを破棄"):
+                del st.session_state.ai_data
                 st.rerun()
 
     tags = st.text_input(
