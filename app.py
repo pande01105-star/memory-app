@@ -194,7 +194,7 @@ elif menu == "一覧":
     else:
         for i, m in enumerate(memories):
             st.write(
-              f"{i}: ⭐{m.get('importance', 3)} | {m['word']} | {m['description']} | タグ: {m.get('tags', '')}"
+              f"{i}: ⭐{m.get('importance', 3)} | {m['word']} | {m['description']} | タグ: {m.get('tags') or ''}"
             )   
 # ---------- 検索 ----------
 elif menu == "検索":
