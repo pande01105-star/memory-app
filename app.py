@@ -89,6 +89,16 @@ def reset_review_cycle(memory_id):
         "base_date": today_text
     }).eq("id", memory_id).execute()
 
+def add_review_log(memory_id, result):
+    user_id = st.session_state.user.id
+
+    supabase.table("review_logs").insert({
+        "memory_id": memory_id,
+        "user_id": user_id,
+        "reviewed_at": datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S"),
+        "result": result
+    }).execute()
+
 # ---------- UI ----------
 st.title("Memory App")
 if st.session_state.user is None:
@@ -346,10 +356,12 @@ elif menu == "復習":
 
                     with col1:
                         if st.button("覚えてた", key=f"remember_{m['id']}"):
+                            add_review_log(m["id"], "remembered")
                             st.success("OK。次の復習タイミングまで保存します")
 
                     with col2:
                         if st.button("忘れてた", key=f"forgot_{m['id']}"):
+                            add_review_log(m["id"], "forgot")
                             reset_review_cycle(m["id"])
                             st.warning("復習サイクルを今日からやり直します")
 
