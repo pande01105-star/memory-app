@@ -169,9 +169,9 @@ if menu == "追加":
         key=f"description_input_{st.session_state.clear_count}"
     )
 
-tags = st.text_input("タグ（例：Python, Git, AI）")
+    tags = st.text_input("タグ（例：Python, Git, AI）")
 
-importance = st.slider("重要度",min_value=1,max_value=5,value=3)
+    importance = st.slider("重要度",min_value=1,max_value=5,value=3)
 
     if st.button("保存"):
         if word.strip() == "" or description.strip() == "":
