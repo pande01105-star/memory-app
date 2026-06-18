@@ -325,9 +325,15 @@ if menu == "追加":
             st.warning("単語と説明の両方を入力してください")
         else:
             add_memory(word, final_description, tags, importance)
+
+            if st.session_state.get("use_ai_data"):
+                memories = load_memories()
+                latest_memory = memories[-1]
+                update_memory_ai(latest_memory["id"], st.session_state.ai_data)
+
             st.success("保存しました")
-            st.session_state.pop("ai_description", None)
-            st.session_state.pop("use_ai_description", None)
+            st.session_state.pop("ai_data", None)
+            st.session_state.pop("use_ai_data", None)
 
             st.session_state.clear_count += 1
             st.rerun()
@@ -467,6 +473,8 @@ elif menu == "復習":
                     f"⭐{m.get('importance') or 3} | "
                     f"タグ: {m.get('tags') or 'なし'}"
                 )
+                if m.get("ai_question"):
+                    st.info(f"思い出す問い：{m['ai_question']}")
 
                 st.markdown(f"## {m['word']}")
 
@@ -474,7 +482,20 @@ elif menu == "復習":
                     st.session_state[show_key] = True
 
                 if st.session_state[show_key]:
-                    st.write(m["description"])
+                    if m.get("ai_understanding"):
+                        st.write("#### 【理解】")
+                        st.write(m.get("ai_understanding"))
+
+                        st.write("#### 【例え話】")
+                        st.write(m.get("ai_example"))
+
+                        st.write("#### 【補足】")
+                        st.write(m.get("ai_extra"))
+
+                        st.write("#### 【自分の言葉で1行】")
+                        st.write(m.get("ai_one_line"))
+                    else:
+                        st.write(m["description"])
 
                     col1, col2 = st.columns(2)
 
