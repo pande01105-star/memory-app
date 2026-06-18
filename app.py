@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from supabase import create_client
 from openai import OpenAI
 
-client = OpenAI(
+openai_client = OpenAI(
     api_key=st.secrets["OPENAI_API_KEY"]
 )
 
