@@ -325,7 +325,7 @@ elif menu == "復習":
     memories = load_memories()
     today = datetime.now(JST).date()
 
-    review_days = [1, 3, 7, 30]
+    review_days = [0, 1, 3, 7, 30]
     review_cards = []
 
     for m in memories:
