@@ -169,9 +169,19 @@ if menu == "追加":
         key=f"description_input_{st.session_state.clear_count}"
     )
 
-    tags = st.text_input("タグ（例：Python, Git, AI）")
+    tags = st.text_input(
+        "タグ（カンマ区切りで入力）",
+        placeholder="例：Python, Git, AI",
+        key=f"tags_input_{st.session_state.clear_count}"
+    )
 
-    importance = st.slider("重要度",min_value=1,max_value=5,value=3)
+    importance = st.slider(
+        "重要度",
+        min_value=1,
+        max_value=5,
+        value=3,
+        key=f"importance_input_{st.session_state.clear_count}"
+    )
 
     if st.button("保存"):
         if word.strip() == "" or description.strip() == "":
@@ -196,7 +206,7 @@ elif menu == "一覧":
             in (m.get("tags") or "").lower()
         ]
     min_importance = st.slider("重要度で絞り込み",min_value=1,max_value=5,value=1)
-    
+
     memories = [
         m for m in memories
         if (m.get("importance") or 3) >= min_importance
