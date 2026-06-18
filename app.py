@@ -359,16 +359,24 @@ elif menu == "削除":
         st.info("削除できるメモがありません")
     else:
         for i, m in enumerate(memories):
-            st.write(
-                f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
-            )
+            with st.container(border=True):
+                st.markdown(f"### {i}: {m['word']}")
+                st.write(m["description"])
+                st.caption(
+                    f"⭐{m.get('importance') or 3} | "
+                    f"タグ: {m.get('tags') or 'なし'} | "
+                    f"作成日: {m['created_at']}"
+                )
 
-        index = st.number_input("削除番号", step=1, min_value=0)
+        index = st.number_input(
+            "削除番号",
+            step=1,
+            min_value=0,
+            max_value=len(memories) - 1
+        )
 
         if st.button("削除"):
-            if 0 <= index < len(memories):
-                memory_id = memories[int(index)]["id"]
-                delete_memory(memory_id)
-                st.success("削除しました")
-            else:
-                st.error("存在しない番号です")
+            memory_id = memories[int(index)]["id"]
+            delete_memory(memory_id)
+            st.success("削除しました")
+            st.rerun()
