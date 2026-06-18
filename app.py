@@ -71,10 +71,12 @@ def add_memory(word, description, tags, importance):
         "importance": importance
     }).execute()
 
-def update_memory(memory_id, word, description):
+def update_memory(memory_id, word, description, tags, importance):
     supabase.table("memories").update({
         "word": word,
-        "description": description
+        "description": description,
+        "tags": tags,
+        "importance": importance
     }).eq("id", memory_id).execute()
 
 def delete_memory(memory_id):
@@ -277,25 +279,35 @@ elif menu == "編集":
     else:
         for i, m in enumerate(memories):
             st.write(
-                f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
+                f"{i}: ⭐{m.get('importance') or 3} | {m['word']} | {m['description']} | タグ: {m.get('tags') or 'なし'}"
             )
 
         index = st.number_input("編集番号", step=1, min_value=0)
 
-        new_word = st.text_input("編集後の単語")
-        new_description = st.text_area("編集後の説明")
+        if 0 <= index < len(memories):
+            target = memories[int(index)]
 
-        if st.button("編集"):
-            if 0 <= index < len(memories):
+            new_word = st.text_input("編集後の単語", value=target["word"])
+            new_description = st.text_area("編集後の説明", value=target["description"])
+            new_tags = st.text_input("編集後のタグ", value=target.get("tags") or "")
+            new_importance = st.slider(
+                "編集後の重要度",
+                min_value=1,
+                max_value=5,
+                value=target.get("importance") or 3
+            )
+
+            if st.button("編集"):
                 if new_word.strip() == "" or new_description.strip() == "":
                     st.warning("単語と説明の両方を入力してください")
                 else:
-                    memory_id = memories[int(index)]["id"]
-                    update_memory(memory_id, new_word, new_description)
+                    memory_id = target["id"]
+                    update_memory(memory_id, new_word, new_description, new_tags, new_importance)
                     st.success("編集しました")
-            else:
-                st.error("存在しない番号です")
-                
+                    st.rerun()
+        else:
+            st.error("存在しない番号です")
+
 # ---------- 復習 ----------
 elif menu == "復習":
     st.subheader("今日の復習")
