@@ -329,25 +329,29 @@ elif menu == "復習":
         st.info("今日復習するカードはありません")
     else:
         for i, m in enumerate(review_cards):
-            st.write(f"問題 {i+1}")
-            st.write(f"復習サイクル開始から {m['days_passed']} 日後")
-            st.write(f"単語：{m['word']}")
+            with st.container(border=True):
+                st.markdown(f"### 問題 {i+1}")
+                st.caption(
+                    f"復習サイクル開始から {m['days_passed']} 日後 | "
+                    f"⭐{m.get('importance') or 3} | "
+                    f"タグ: {m.get('tags') or 'なし'}"
+                )
 
-            if st.button("答えを見る", key=f"answer_{m['id']}"):
-                st.write(f"説明：{m['description']}")
+                st.markdown(f"## {m['word']}")
 
-                col1, col2 = st.columns(2)
+                if st.button("答えを見る", key=f"answer_{m['id']}"):
+                    st.write(m["description"])
 
-                with col1:
-                    if st.button("覚えてた", key=f"remember_{m['id']}"):
-                        st.success("OK。次の復習タイミングまで保存します")
+                    col1, col2 = st.columns(2)
 
-                with col2:
-                    if st.button("忘れてた", key=f"forgot_{m['id']}"):
-                        reset_review_cycle(m["id"])
-                        st.warning("復習サイクルを今日からやり直します")
+                    with col1:
+                        if st.button("覚えてた", key=f"remember_{m['id']}"):
+                            st.success("OK。次の復習タイミングまで保存します")
 
-            st.divider()
+                    with col2:
+                        if st.button("忘れてた", key=f"forgot_{m['id']}"):
+                            reset_review_cycle(m["id"])
+                            st.warning("復習サイクルを今日からやり直します")
 
 # ---------- 削除 ----------
 elif menu == "削除":
