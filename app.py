@@ -193,9 +193,17 @@ elif menu == "一覧":
         st.info("メモがありません")
     else:
         for i, m in enumerate(memories):
-            st.write(
-              f"{i}: ⭐{m.get('importance', 3)} | {m['word']} | {m['description']} | タグ: {m.get('tags') or ''}"
-            )   
+            with st.container(border=True):
+                st.markdown(f"### {m['word']}")
+
+                st.write(m["description"])
+
+                st.caption(
+                    f"⭐{m.get('importance') or 3} | "
+                    f"タグ: {m.get('tags') or 'なし'} | "
+                    f"作成日: {m['created_at']}"
+                )  
+
 # ---------- 検索 ----------
 elif menu == "検索":
     st.subheader("メモ検索")
