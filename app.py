@@ -322,8 +322,8 @@ if menu == "追加":
     final_description = description
 
     if st.button("保存"):
-        if word.strip() == "" or description.strip() == "":
-            st.warning("単語と説明の両方を入力してください")
+        if word.strip() == "":
+            st.warning("単語を入力してください")
         else:
             add_memory(word, final_description, tags, importance)
 
@@ -444,7 +444,7 @@ elif menu == "編集":
             target = memories[int(index)]
 
             new_word = st.text_input("編集後の単語", value=target["word"])
-            new_description = st.text_area("編集後の説明", value=target["description"])
+            new_description = st.text_area("編集後の説明", value=target.get("description") or "")
             new_tags = st.text_input("編集後のタグ", value=target.get("tags") or "")
             new_importance = st.slider(
                 "編集後の重要度",
@@ -454,8 +454,8 @@ elif menu == "編集":
             )
 
             if st.button("編集"):
-                if new_word.strip() == "" or new_description.strip() == "":
-                    st.warning("単語と説明の両方を入力してください")
+                if new_word.strip() == "":
+                    st.warning("単語を入力してください")
                 else:
                     memory_id = target["id"]
                     update_memory(memory_id, new_word, new_description, new_tags, new_importance)
@@ -506,58 +506,44 @@ elif menu == "復習":
                     st.session_state[show_key] = True
 
                 if st.session_state[show_key]:
-                    if m.get("ai_understanding"):
-                        st.write("#### 【理解】")
-                        st.write(m.get("ai_understanding"))
+                    if m.get("description"):
+                        st.write("#### 【自分の説明】")
+                        st.write(m["description"])
 
-                        st.write("#### 【例え話】")
-                        st.write(m.get("ai_example"))
-
-                        st.write("#### 【補足】")
-                        st.write(m.get("ai_extra"))
-
+                    if m.get("ai_one_line"):
                         st.write("#### 【自分の言葉で1行】")
                         st.write(m.get("ai_one_line"))
-                    else:
-                        if st.session_state[show_key]:
-                            if m.get("description"):
-                                st.write("#### 【自分の説明】")
-                                st.write(m["description"])
 
-                            if m.get("ai_one_line"):
-                                st.write("#### 【自分の言葉で1行】")
-                                st.write(m.get("ai_one_line"))
+                    if m.get("ai_understanding"):
+                        with st.expander("理解・例え話・補足を見る"):
+                            st.write("#### 【理解】")
+                            st.write(m.get("ai_understanding"))
 
-                            if m.get("ai_understanding"):
-                                with st.expander("理解・例え話・補足を見る"):
-                                    st.write("#### 【理解】")
-                                    st.write(m.get("ai_understanding"))
+                            st.write("#### 【例え話】")
+                            st.write(m.get("ai_example"))
 
-                                    st.write("#### 【例え話】")
-                                    st.write(m.get("ai_example"))
+                            st.write("#### 【補足】")
+                            st.write(m.get("ai_extra"))
 
-                                    st.write("#### 【補足】")
-                                    st.write(m.get("ai_extra"))
+                    if not m.get("description") and not m.get("ai_one_line"):
+                        st.write("説明がありません")
 
-                            if not m.get("description") and not m.get("ai_one_line"):
-                                st.write("説明がありません")
+                    col1, col2 = st.columns(2)
 
-                            col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("覚えてた", key=f"remember_{m['id']}"):
+                            add_review_log(m["id"], "remembered")
+                            st.session_state[show_key] = False
+                            st.success("OK。復習履歴に記録しました")
+                            st.rerun()
 
-                            with col1:
-                                if st.button("覚えてた", key=f"remember_{m['id']}"):
-                                    add_review_log(m["id"], "remembered")
-                                    st.session_state[show_key] = False
-                                    st.success("OK。復習履歴に記録しました")
-                                    st.rerun()
-
-                            with col2:
-                                if st.button("忘れてた", key=f"forgot_{m['id']}"):
-                                    add_review_log(m["id"], "forgot")
-                                    reset_review_cycle(m["id"])
-                                    st.session_state[show_key] = False
-                                    st.warning("復習サイクルを今日からやり直します")
-                                    st.rerun()
+                    with col2:
+                        if st.button("忘れてた", key=f"forgot_{m['id']}"):
+                            add_review_log(m["id"], "forgot")
+                            reset_review_cycle(m["id"])
+                            st.session_state[show_key] = False
+                            st.warning("復習サイクルを今日からやり直します")
+                            st.rerun()
 
 # ---------- 統計 ----------
 elif menu == "統計":
