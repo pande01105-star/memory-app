@@ -248,16 +248,21 @@ elif menu == "検索":
         memories = load_memories()
         results = [
             m for m in memories
-            if keyword in m["word"]
-            or keyword in m["description"]
-            or keyword in (m.get("tags") or "")
+            if keyword.lower() in m["word"].lower()
+            or keyword.lower() in m["description"].lower()
+            or keyword.lower() in (m.get("tags") or "").lower()
         ]
 
         if results:
-            for i, m in enumerate(results):
-                st.write(
-                    f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
-                )
+            for m in results:
+                with st.container(border=True):
+                    st.markdown(f"### {m['word']}")
+                    st.write(m["description"])
+                    st.caption(
+                        f"⭐{m.get('importance') or 3} | "
+                        f"タグ: {m.get('tags') or 'なし'} | "
+                        f"作成日: {m['created_at']}"
+                    )
         else:
             st.info("該当なし")
 
@@ -290,6 +295,7 @@ elif menu == "編集":
                     st.success("編集しました")
             else:
                 st.error("存在しない番号です")
+                
 # ---------- 復習 ----------
 elif menu == "復習":
     st.subheader("今日の復習")
