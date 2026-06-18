@@ -261,13 +261,16 @@ if menu == "追加":
         key=f"description_input_{st.session_state.clear_count}"
     )
     if st.button("理解カードを作る"):
-        if word.strip() == "" or description.strip() == "":
-            st.warning("単語と説明を入力してから使ってください")
+        if word.strip() == "":
+            st.warning("単語を入力してください")
         else:
             with st.spinner("AIが説明を整えています..."):
                 ai_data = summarize_memory(word, description)
 
                 st.session_state.ai_data = ai_data
+    
+    if st.session_state.get("ai_card_adopted"):
+        st.success("理解カードを採用しました。保存するとメモに反映されます。")
     
     if "ai_data" in st.session_state:
         st.markdown("### AI理解カード")
@@ -294,6 +297,7 @@ if menu == "追加":
         with col1:
             if st.button("理解カードを採用"):
                 st.session_state.use_ai_data = True
+                st.session_state.ai_card_adopted = True
                 st.rerun()
 
         with col2:
@@ -317,9 +321,6 @@ if menu == "追加":
 
     final_description = description
 
-    if st.session_state.get("use_ai_description"):
-        final_description = st.session_state.ai_description
-
     if st.button("保存"):
         if word.strip() == "" or description.strip() == "":
             st.warning("単語と説明の両方を入力してください")
@@ -334,6 +335,7 @@ if menu == "追加":
             st.success("保存しました")
             st.session_state.pop("ai_data", None)
             st.session_state.pop("use_ai_data", None)
+            st.session_state.pop("ai_card_adopted", None)
 
             st.session_state.clear_count += 1
             st.rerun()
@@ -364,7 +366,27 @@ elif menu == "一覧":
             with st.container(border=True):
                 st.markdown(f"### {m['word']}")
 
-                st.write(m["description"])
+                if m.get("description"):
+                    st.write(m["description"])
+
+                if m.get("ai_one_line"):
+                    st.info(f"1行化：{m.get('ai_one_line')}")
+
+                with st.expander("理解カードを見る"):
+                    if m.get("ai_understanding"):
+                        st.write("#### 【理解】")
+                        st.write(m.get("ai_understanding"))
+
+                        st.write("#### 【例え話】")
+                        st.write(m.get("ai_example"))
+
+                        st.write("#### 【補足】")
+                        st.write(m.get("ai_extra"))
+
+                        st.write("#### 【思い出す問い】")
+                        st.write(m.get("ai_question"))
+                    else:
+                        st.write("理解カードはありません")
 
                 st.caption(
                     f"⭐{m.get('importance') or 3} | "
@@ -410,8 +432,10 @@ elif menu == "編集":
         st.info("編集できるメモがありません")
     else:
         for i, m in enumerate(memories):
+            display_text = m.get("description") or m.get("ai_one_line") or "説明なし"
+
             st.write(
-                f"{i}: ⭐{m.get('importance') or 3} | {m['word']} | {m['description']} | タグ: {m.get('tags') or 'なし'}"
+                f"{i}: ⭐{m.get('importance') or 3} | {m['word']} | {display_text} | タグ: {m.get('tags') or 'なし'}"
             )
 
         index = st.number_input("編集番号", step=1, min_value=0)
@@ -495,24 +519,45 @@ elif menu == "復習":
                         st.write("#### 【自分の言葉で1行】")
                         st.write(m.get("ai_one_line"))
                     else:
-                        st.write(m["description"])
+                        if st.session_state[show_key]:
+                            if m.get("description"):
+                                st.write("#### 【自分の説明】")
+                                st.write(m["description"])
 
-                    col1, col2 = st.columns(2)
+                            if m.get("ai_one_line"):
+                                st.write("#### 【自分の言葉で1行】")
+                                st.write(m.get("ai_one_line"))
 
-                    with col1:
-                        if st.button("覚えてた", key=f"remember_{m['id']}"):
-                            add_review_log(m["id"], "remembered")
-                            st.session_state[show_key] = False
-                            st.success("OK。復習履歴に記録しました")
-                            st.rerun()
+                            if m.get("ai_understanding"):
+                                with st.expander("理解・例え話・補足を見る"):
+                                    st.write("#### 【理解】")
+                                    st.write(m.get("ai_understanding"))
 
-                    with col2:
-                        if st.button("忘れてた", key=f"forgot_{m['id']}"):
-                            add_review_log(m["id"], "forgot")
-                            reset_review_cycle(m["id"])
-                            st.session_state[show_key] = False
-                            st.warning("復習サイクルを今日からやり直します")
-                            st.rerun()
+                                    st.write("#### 【例え話】")
+                                    st.write(m.get("ai_example"))
+
+                                    st.write("#### 【補足】")
+                                    st.write(m.get("ai_extra"))
+
+                            if not m.get("description") and not m.get("ai_one_line"):
+                                st.write("説明がありません")
+
+                            col1, col2 = st.columns(2)
+
+                            with col1:
+                                if st.button("覚えてた", key=f"remember_{m['id']}"):
+                                    add_review_log(m["id"], "remembered")
+                                    st.session_state[show_key] = False
+                                    st.success("OK。復習履歴に記録しました")
+                                    st.rerun()
+
+                            with col2:
+                                if st.button("忘れてた", key=f"forgot_{m['id']}"):
+                                    add_review_log(m["id"], "forgot")
+                                    reset_review_cycle(m["id"])
+                                    st.session_state[show_key] = False
+                                    st.warning("復習サイクルを今日からやり直します")
+                                    st.rerun()
 
 # ---------- 統計 ----------
 elif menu == "統計":
@@ -619,9 +664,11 @@ elif menu == "削除":
         st.info("削除できるメモがありません")
     else:
         for i, m in enumerate(memories):
+            display_text = m.get("description") or m.get("ai_one_line") or "説明なし"
+
             with st.container(border=True):
                 st.markdown(f"### {i}: {m['word']}")
-                st.write(m["description"])
+                st.write(display_text)
                 st.caption(
                     f"⭐{m.get('importance') or 3} | "
                     f"タグ: {m.get('tags') or 'なし'} | "
