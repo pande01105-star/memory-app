@@ -195,6 +195,12 @@ elif menu == "一覧":
             if selected_tag.lower()
             in (m.get("tags") or "").lower()
         ]
+    min_importance = st.slider("重要度で絞り込み",min_value=1,max_value=5,value=1)
+    
+    memories = [
+        m for m in memories
+        if (m.get("importance") or 3) >= min_importance
+    ]
 
     if not memories:
         st.info("メモがありません")
