@@ -8,12 +8,26 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-if "access_token" in st.session_state and st.session_state.access_token:
-    supabase.auth.set_session(
-        st.session_state.access_token,
-        st.session_state.refresh_token
-    )
-    supabase.postgrest.auth(st.session_state.access_token)
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+if "access_token" not in st.session_state:
+    st.session_state.access_token = None
+
+if "refresh_token" not in st.session_state:
+    st.session_state.refresh_token = None
+
+if st.session_state.access_token and st.session_state.refresh_token:
+    try:
+        supabase.auth.set_session(
+            st.session_state.access_token,
+            st.session_state.refresh_token
+        )
+        supabase.postgrest.auth(st.session_state.access_token)
+    except Exception:
+        st.session_state.user = None
+        st.session_state.access_token = None
+        st.session_state.refresh_token = None
 
 # ---------- データ処理 ----------
 def sign_up(email, password):
@@ -74,9 +88,6 @@ def reset_review_cycle(memory_id):
     }).eq("id", memory_id).execute()
 
 # ---------- UI ----------
-if "user" not in st.session_state:
-    st.session_state.user = None
-
 st.title("Memory App")
 if st.session_state.user is None:
     st.subheader("ログイン / 新規登録")
