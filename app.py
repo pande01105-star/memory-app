@@ -43,7 +43,7 @@ def load_memories():
     )
     return response.data
 
-def add_memory(word, description):
+def add_memory(word, description, tags, importance):
     dt = datetime.now(JST)
     user_id = st.session_state.user.id
 
@@ -52,7 +52,9 @@ def add_memory(word, description):
         "word": word,
         "description": description,
         "base_date": dt.strftime("%Y-%m-%d"),
-        "user_id": user_id
+        "user_id": user_id,
+        "tags": tags,
+        "importance": importance
     }).execute()
 
 def update_memory(memory_id, word, description):
@@ -188,8 +190,8 @@ elif menu == "一覧":
     else:
         for i, m in enumerate(memories):
             st.write(
-                f"{i}: {m['created_at']} | {m['word']} | {m['description']}"
-            )
+              f"{i}: ⭐{m.get('importance', 3)} | {m['word']} | {m['description']} | タグ: {m.get('tags', '')}"
+            )   
 # ---------- 検索 ----------
 elif menu == "検索":
     st.subheader("メモ検索")
@@ -200,7 +202,9 @@ elif menu == "検索":
         memories = load_memories()
         results = [
             m for m in memories
-            if keyword in m["word"] or keyword in m["description"]
+            if keyword in m["word"]
+            or keyword in m["description"]
+            or keyword in (m.get("tags") or "")
         ]
 
         if results:
