@@ -188,6 +188,13 @@ elif menu == "一覧":
     st.subheader("メモ一覧")
 
     memories = load_memories()
+    selected_tag = st.text_input("タグで絞り込み")
+    if selected_tag:
+    memories = [
+        m for m in memories
+        if selected_tag.lower()
+        in (m.get("tags") or "").lower()
+    ]
 
     if not memories:
         st.info("メモがありません")
