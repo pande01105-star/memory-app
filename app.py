@@ -234,29 +234,29 @@ if menu == "追加":
         key=f"description_input_{st.session_state.clear_count}"
     )
     if st.button("AIで説明を整える"):
-    if word.strip() == "" or description.strip() == "":
-        st.warning("単語と説明を入力してから使ってください")
-    else:
-        with st.spinner("AIが説明を整えています..."):
-            ai_description = summarize_memory(word, description)
+        if word.strip() == "" or description.strip() == "":
+            st.warning("単語と説明を入力してから使ってください")
+        else:
+            with st.spinner("AIが説明を整えています..."):
+                ai_description = summarize_memory(word, description)
 
-        st.session_state.ai_description = ai_description
+            st.session_state.ai_description = ai_description
     
     if "ai_description" in st.session_state:
-    st.markdown("### AI提案")
-    st.write(st.session_state.ai_description)
+        st.markdown("### AI提案")
+        st.write(st.session_state.ai_description)
 
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-    with col1:
-        if st.button("AI提案を採用"):
-            st.session_state.use_ai_description = True
-            st.rerun()
+        with col1:
+            if st.button("AI提案を採用"):
+                st.session_state.use_ai_description = True
+                st.rerun()
 
-    with col2:
-        if st.button("AI提案を破棄"):
-            del st.session_state.ai_description
-            st.rerun()
+        with col2:
+            if st.button("AI提案を破棄"):
+                del st.session_state.ai_description
+                st.rerun()
 
     tags = st.text_input(
         "タグ（カンマ区切りで入力）",
