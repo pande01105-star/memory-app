@@ -171,7 +171,11 @@ JSON形式:
 
 def generate_tags(word, description):
     prompt = f"""
-次の単語と説明から、学習用タグを3〜5個作ってください。
+あなたは学習メモアプリのタグ生成AIです。
+
+次の単語と説明から、検索や復習に役立つタグを3〜5個作ってください。
+
+説明が空の場合は、単語の一般的な意味や関連分野からタグを推測してください。
 
 必ずJSONだけで返してください。
 説明文やコードブロックは不要です。
@@ -185,13 +189,15 @@ JSON形式:
 - 日本語
 - 短いタグ
 - 重複しない
+- 検索しやすい
 - 広すぎるタグだけにしない
+- 単語そのものも必要ならタグに含めてよい
 
 単語:
 {word}
 
 説明:
-{description}
+{description if description.strip() else "説明なし"}
 """
 
     response = openai_client.responses.create(
@@ -349,6 +355,7 @@ if menu == "追加":
             if st.button("理解カードを破棄"):
                 del st.session_state.ai_data
                 st.rerun()
+
     if st.button("AIタグを作る"):
         if word.strip() == "":
             st.warning("単語を入力してください")
@@ -356,6 +363,7 @@ if menu == "追加":
             with st.spinner("AIがタグを考えています..."):
                 tag_data = generate_tags(word, description)
                 st.session_state.ai_tags = ", ".join(tag_data.get("tags", []))
+                st.rerun()
 
     tags = st.text_input(
         "タグ（カンマ区切りで入力）",
