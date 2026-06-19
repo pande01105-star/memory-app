@@ -350,14 +350,6 @@ if menu == "追加":
                 del st.session_state.ai_data
                 st.rerun()
 
-    if st.button("AIタグを作る"):
-        if word.strip() == "":
-            st.warning("単語を入力してください")
-        else:
-            with st.spinner("AIがタグを考えています..."):
-                tag_data = generate_tags(word, description)
-                st.session_state.ai_tags = ", ".join(tag_data.get("tags", []))
-
     tag_key = f"tags_input_{st.session_state.clear_count}"
 
     if st.button("AIタグを作る"):
