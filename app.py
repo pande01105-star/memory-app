@@ -54,14 +54,20 @@ def sign_out():
 def load_memories():
     user_id = st.session_state.user.id
 
-    response = (
-        supabase.table("memories")
-        .select("*")
-        .eq("user_id", user_id)
-        .order("id")
-        .execute()
-    )
-    return response.data
+    try:
+        response = (
+            supabase.table("memories")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("id")
+            .execute()
+        )
+        return response.data
+
+    except Exception as e:
+        st.error("メモの読み込みに失敗しました")
+        st.write(e)
+        return []
 
 def add_memory(word, description, tags, importance):
     dt = datetime.now(JST)
@@ -351,7 +357,7 @@ if menu == "追加":
     st.divider()
     st.markdown("### AI補助")
     st.caption("単語だけでも使えます。説明があると精度が上がります。")
-    
+
     if st.button("理解カードを作る"):
         if word.strip() == "":
             st.warning("単語を入力してください")
