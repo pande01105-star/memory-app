@@ -402,27 +402,27 @@ if menu == "追加":
                 st.rerun()
     
     if st.button("AIクイズを作る", key=f"ai_quiz_button_{st.session_state.clear_count}"):
-    if word.strip() == "":
-        st.warning("単語を入力してください")
-    else:
-        with st.spinner("AIがクイズを考えています..."):
-            quiz_data = generate_quiz(word, description)
-            st.session_state.ai_quiz = quiz_data
-            st.rerun()
+        if word.strip() == "":
+            st.warning("単語を入力してください")
+        else:
+            with st.spinner("AIがクイズを考えています..."):
+                quiz_data = generate_quiz(word, description)
+                st.session_state.ai_quiz = quiz_data
+                st.rerun()
 
-    if "ai_quiz" in st.session_state:
-        st.markdown("### AIクイズ")
+        if "ai_quiz" in st.session_state:
+            st.markdown("### AIクイズ")
 
-        quiz_data = st.session_state.ai_quiz
+            quiz_data = st.session_state.ai_quiz
 
-        st.write("#### 【問題】")
-        st.write(quiz_data.get("question", ""))
+            st.write("#### 【問題】")
+            st.write(quiz_data.get("question", ""))
 
-        st.write("#### 【ヒント】")
-        st.write(quiz_data.get("hint", ""))
+            st.write("#### 【ヒント】")
+            st.write(quiz_data.get("hint", ""))
 
-        st.write("#### 【答え】")
-        st.write(quiz_data.get("answer", ""))
+            st.write("#### 【答え】")
+            st.write(quiz_data.get("answer", ""))
 
     tags = st.text_input(
         "タグ（カンマ区切りで入力）",
