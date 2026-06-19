@@ -220,6 +220,8 @@ def generate_quiz(word, description):
 説明がない場合は、単語の一般的な意味から推測してください。
 
 必ずJSONだけで返してください。
+コードブロックは禁止です。
+説明文は禁止です。
 
 JSON形式:
 {{
@@ -243,7 +245,12 @@ JSON形式:
 
     response = openai_client.responses.create(
         model="gpt-4.1-mini",
-        input=prompt
+        input=prompt,
+        text={
+            "format": {
+                "type": "json_object"
+            }
+        }
     )
 
     text = response.output_text.strip()
