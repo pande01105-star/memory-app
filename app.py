@@ -329,7 +329,7 @@ if st.sidebar.button("ログアウト"):
 
 menu = st.sidebar.selectbox(
     "メニュー",
-    ["追加", "一覧", "検索", "復習", "統計", "AI要約", "編集", "削除"]
+    ["追加", "一覧", "検索", "復習", "AIクイズ", "統計", "AI要約", "編集", "削除"]
 )
 
 # ---------- 追加 ----------
@@ -690,6 +690,55 @@ elif menu == "復習":
                             st.session_state[show_key] = False
                             st.warning("復習サイクルを今日からやり直します")
                             st.rerun()
+
+# ---------- AIクイズ ----------
+elif menu == "AIクイズ":
+    st.subheader("AIクイズ")
+
+    memories = load_memories()
+
+    quiz_memories = [
+        m for m in memories
+        if m.get("ai_quiz_question")
+    ]
+
+    if not quiz_memories:
+        st.info("クイズがありません")
+    else:
+        import random
+
+        if "quiz_index" not in st.session_state:
+            st.session_state.quiz_index = random.randint(
+                0,
+                len(quiz_memories) - 1
+            )
+
+        target = quiz_memories[
+            st.session_state.quiz_index
+        ]
+
+        st.write("### 問題")
+
+        st.info(
+            target.get("ai_quiz_question", "")
+        )
+
+        if st.button("ヒントを見る"):
+            st.write(
+                target.get("ai_quiz_hint", "")
+            )
+
+        if st.button("答えを見る"):
+            st.success(
+                target.get("ai_quiz_answer", "")
+            )
+
+        if st.button("次の問題"):
+            st.session_state.quiz_index = random.randint(
+                0,
+                len(quiz_memories) - 1
+            )
+            st.rerun()
 
 # ---------- 統計 ----------
 elif menu == "統計":
