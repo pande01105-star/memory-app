@@ -202,6 +202,46 @@ JSON形式:
     text = response.output_text.strip()
     return json.loads(text)
 
+def generate_quiz(word, description):
+    description_text = description.strip() if description and description.strip() else "説明なし"
+
+    prompt = f"""
+あなたは学習メモアプリのクイズ生成AIです。
+
+次の単語から、復習用のクイズを1問作ってください。
+説明がある場合は説明も参考にしてください。
+説明がない場合は、単語の一般的な意味から推測してください。
+
+必ずJSONだけで返してください。
+
+JSON形式:
+{{
+  "question": "問題文",
+  "answer": "答え",
+  "hint": "ヒント"
+}}
+
+条件:
+- 日本語
+- 問題文に単語そのものを含めない
+- 答えは短め
+- ヒントは答えを直接言いすぎない
+
+単語:
+{word}
+
+説明:
+{description_text}
+"""
+
+    response = openai_client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
+    )
+
+    text = response.output_text.strip()
+    return json.loads(text)
+
 # ---------- UI ----------
 st.title("Memory App")
 if st.session_state.user is None:
@@ -360,6 +400,29 @@ if menu == "追加":
                 tag_data = generate_tags(word, description)
                 st.session_state[tag_key] = ", ".join(tag_data.get("tags", []))
                 st.rerun()
+    
+    if st.button("AIクイズを作る", key=f"ai_quiz_button_{st.session_state.clear_count}"):
+    if word.strip() == "":
+        st.warning("単語を入力してください")
+    else:
+        with st.spinner("AIがクイズを考えています..."):
+            quiz_data = generate_quiz(word, description)
+            st.session_state.ai_quiz = quiz_data
+            st.rerun()
+
+    if "ai_quiz" in st.session_state:
+        st.markdown("### AIクイズ")
+
+        quiz_data = st.session_state.ai_quiz
+
+        st.write("#### 【問題】")
+        st.write(quiz_data.get("question", ""))
+
+        st.write("#### 【ヒント】")
+        st.write(quiz_data.get("hint", ""))
+
+        st.write("#### 【答え】")
+        st.write(quiz_data.get("answer", ""))
 
     tags = st.text_input(
         "タグ（カンマ区切りで入力）",
