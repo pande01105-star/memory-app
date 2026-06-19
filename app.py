@@ -169,6 +169,39 @@ JSON形式:
     text = response.output_text.strip()
     return json.loads(text)
 
+def generate_tags(word, description):
+    prompt = f"""
+次の単語と説明から、学習用タグを3〜5個作ってください。
+
+必ずJSONだけで返してください。
+説明文やコードブロックは不要です。
+
+JSON形式:
+{{
+  "tags": ["タグ1", "タグ2", "タグ3"]
+}}
+
+条件:
+- 日本語
+- 短いタグ
+- 重複しない
+- 広すぎるタグだけにしない
+
+単語:
+{word}
+
+説明:
+{description}
+"""
+
+    response = openai_client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
+    )
+
+    text = response.output_text.strip()
+    return json.loads(text)
+
 # ---------- UI ----------
 st.title("Memory App")
 if st.session_state.user is None:
@@ -316,9 +349,17 @@ if menu == "追加":
             if st.button("理解カードを破棄"):
                 del st.session_state.ai_data
                 st.rerun()
+    if st.button("AIタグを作る"):
+        if word.strip() == "":
+            st.warning("単語を入力してください")
+        else:
+            with st.spinner("AIがタグを考えています..."):
+                tag_data = generate_tags(word, description)
+                st.session_state.ai_tags = ", ".join(tag_data.get("tags", []))
 
     tags = st.text_input(
         "タグ（カンマ区切りで入力）",
+        value=st.session_state.get("ai_tags", ""),
         placeholder="例：Python, Git, AI",
         key=f"tags_input_{st.session_state.clear_count}"
     )
