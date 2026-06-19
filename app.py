@@ -94,6 +94,13 @@ def update_memory_ai(memory_id, ai_data, user_one_line):
         "ai_question": ai_data.get("question", "")
     }).eq("id", memory_id).execute()
 
+def update_memory_quiz(memory_id, quiz_data):
+    supabase.table("memories").update({
+        "ai_quiz_question": quiz_data.get("question", ""),
+        "ai_quiz_answer": quiz_data.get("answer", ""),
+        "ai_quiz_hint": quiz_data.get("hint", "")
+    }).eq("id", memory_id).execute()
+
 def delete_memory(memory_id):
     supabase.table("memories").delete().eq("id", memory_id).execute()
 
@@ -454,12 +461,20 @@ if menu == "追加":
                     st.session_state.ai_data,
                     st.session_state.user_one_line
                 )
+            if st.session_state.get("ai_quiz"):
+                memories = load_memories()
+                latest_memory = memories[-1]
+                update_memory_quiz(
+                    latest_memory["id"],
+                    st.session_state.ai_quiz
+                )
 
             st.success("保存しました")
             st.session_state.pop("ai_data", None)
             st.session_state.pop("use_ai_data", None)
             st.session_state.pop("ai_card_adopted", None)
             st.session_state.pop("user_one_line", None)
+            st.session_state.pop("ai_quiz", None)
 
             st.session_state.clear_count += 1
             st.rerun()
