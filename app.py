@@ -348,6 +348,10 @@ if menu == "追加":
         "説明",
         key=f"description_input_{st.session_state.clear_count}"
     )
+    st.divider()
+    st.markdown("### AI補助")
+    st.caption("単語だけでも使えます。説明があると精度が上がります。")
+    
     if st.button("理解カードを作る"):
         if word.strip() == "":
             st.warning("単語を入力してください")
@@ -533,6 +537,25 @@ elif menu == "一覧":
                         st.write(m.get("ai_question"))
                     else:
                         st.write("理解カードはありません")
+
+                if m.get("ai_understanding"):
+                    st.success("🧠 理解カードあり")
+
+                if m.get("ai_quiz_question"):
+                    st.info("❓ AIクイズあり")
+                
+                with st.expander("AIクイズを見る"):
+                    if m.get("ai_quiz_question"):
+                        st.write("#### 【問題】")
+                        st.write(m.get("ai_quiz_question"))
+
+                        st.write("#### 【ヒント】")
+                        st.write(m.get("ai_quiz_hint"))
+
+                        st.write("#### 【答え】")
+                        st.write(m.get("ai_quiz_answer"))
+                    else:
+                        st.write("AIクイズはありません")
 
                 st.caption(
                     f"⭐{m.get('importance') or 3} | "
