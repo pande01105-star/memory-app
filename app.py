@@ -697,13 +697,30 @@ elif menu == "AIクイズ":
 
     memories = load_memories()
 
+    st.write("### 出題設定")
+
+    tag_filter = st.text_input(
+        "タグで絞り込み",
+        placeholder="例：Python, AI, Git"
+    )
+
+    min_importance = st.slider(
+        "重要度で絞り込み",
+        min_value=1,
+        max_value=5,
+        value=1,
+        key="quiz_min_importance"
+    )
+
     quiz_memories = [
         m for m in memories
         if m.get("ai_quiz_question")
+        and (tag_filter.strip() == "" or tag_filter.lower() in (m.get("tags") or "").lower())
+        and (m.get("importance") or 3) >= min_importance
     ]
 
     if not quiz_memories:
-        st.info("クイズがありません")
+        st.info("条件に合うクイズがありません")
     else:
         import random
 
@@ -747,6 +764,9 @@ elif menu == "AIクイズ":
         if st.session_state[answer_key]:
             st.write("#### 答え")
             st.success(target.get("ai_quiz_answer", ""))
+
+            st.write("#### 元の単語")
+            st.info(target.get("word", ""))
         
         col1, col2 = st.columns(2)
 
