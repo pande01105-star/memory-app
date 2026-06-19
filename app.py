@@ -358,11 +358,21 @@ if menu == "追加":
                 tag_data = generate_tags(word, description)
                 st.session_state.ai_tags = ", ".join(tag_data.get("tags", []))
 
+    tag_key = f"tags_input_{st.session_state.clear_count}"
+
+    if st.button("AIタグを作る"):
+        if word.strip() == "":
+            st.warning("単語を入力してください")
+        else:
+            with st.spinner("AIがタグを考えています..."):
+                tag_data = generate_tags(word, description)
+                st.session_state[tag_key] = ", ".join(tag_data.get("tags", []))
+                st.rerun()
+
     tags = st.text_input(
         "タグ（カンマ区切りで入力）",
-        value=st.session_state.get("ai_tags", ""),
         placeholder="例：Python, Git, AI",
-        key=f"tags_input_{st.session_state.clear_count}"
+        key=tag_key
     )
 
     importance = st.slider(
