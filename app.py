@@ -25,11 +25,17 @@ if "refresh_token" not in st.session_state:
 
 if st.session_state.access_token and st.session_state.refresh_token:
     try:
-        supabase.auth.set_session(
+        response = supabase.auth.set_session(
             st.session_state.access_token,
             st.session_state.refresh_token
         )
+
+        st.session_state.user = response.user
+        st.session_state.access_token = response.session.access_token
+        st.session_state.refresh_token = response.session.refresh_token
+
         supabase.postgrest.auth(st.session_state.access_token)
+
     except Exception:
         st.session_state.user = None
         st.session_state.access_token = None
