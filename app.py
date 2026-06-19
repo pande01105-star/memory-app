@@ -730,6 +730,9 @@ elif menu == "AIクイズ":
                 len(quiz_memories) - 1
             )
 
+        if st.session_state.quiz_index >= len(quiz_memories):
+            st.session_state.quiz_index = 0
+
         target = quiz_memories[
             st.session_state.quiz_index
         ]
