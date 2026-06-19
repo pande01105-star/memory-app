@@ -723,17 +723,57 @@ elif menu == "AIクイズ":
             target.get("ai_quiz_question", "")
         )
 
-        if st.button("ヒントを見る"):
-            st.write(
-                target.get("ai_quiz_hint", "")
-            )
+        quiz_id = target["id"]
 
-        if st.button("答えを見る"):
-            st.success(
-                target.get("ai_quiz_answer", "")
-            )
+        hint_key = f"show_quiz_hint_{quiz_id}"
+        answer_key = f"show_quiz_answer_{quiz_id}"
 
-        if st.button("次の問題"):
+        if hint_key not in st.session_state:
+            st.session_state[hint_key] = False
+
+        if answer_key not in st.session_state:
+            st.session_state[answer_key] = False
+
+        if st.button("ヒントを見る", key=f"hint_button_{quiz_id}"):
+            st.session_state[hint_key] = True
+
+        if st.session_state[hint_key]:
+            st.write("#### ヒント")
+            st.write(target.get("ai_quiz_hint", ""))
+
+        if st.button("答えを見る", key=f"answer_button_{quiz_id}"):
+            st.session_state[answer_key] = True
+
+        if st.session_state[answer_key]:
+            st.write("#### 答え")
+            st.success(target.get("ai_quiz_answer", ""))
+        
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("覚えてた", key=f"quiz_remember_{target['id']}"):
+                add_review_log(target["id"], "remembered")
+                st.success("記録しました")
+                st.session_state.quiz_index = random.randint(
+                    0,
+                    len(quiz_memories) - 1
+                )
+                st.rerun()
+
+        with col2:
+            if st.button("忘れてた", key=f"quiz_forgot_{target['id']}"):
+                add_review_log(target["id"], "forgot")
+                reset_review_cycle(target["id"])
+                st.warning("復習サイクルを今日からやり直します")
+                st.session_state.quiz_index = random.randint(
+                    0,
+                    len(quiz_memories) - 1
+                )
+                st.rerun()
+
+        if st.button("次の問題", key=f"next_quiz_{quiz_id}"):
+            st.session_state[hint_key] = False
+            st.session_state[answer_key] = False
             st.session_state.quiz_index = random.randint(
                 0,
                 len(quiz_memories) - 1
