@@ -570,29 +570,6 @@ if menu == "追加":
                 tag_data = generate_tags(word, description)
                 st.session_state[tag_key] = ", ".join(tag_data.get("tags", []))
                 st.rerun()
-    
-    if st.button("AIクイズを作る", key=f"ai_quiz_button_{st.session_state.clear_count}"):
-        if word.strip() == "":
-            st.warning("単語を入力してください")
-        else:
-            with st.spinner("AIがクイズを考えています..."):
-                quiz_data = generate_quiz(word, description)
-                st.session_state.ai_quiz = quiz_data
-                st.rerun()
-
-    if "ai_quiz" in st.session_state:
-        st.markdown("### AIクイズ")
-
-        quiz_data = st.session_state.ai_quiz
-
-        st.write("#### 【問題】")
-        st.write(quiz_data.get("question", ""))
-
-        st.write("#### 【ヒント】")
-        st.write(quiz_data.get("hint", ""))
-
-        st.write("#### 【答え】")
-        st.write(quiz_data.get("answer", ""))
 
     tags = st.text_input(
         "タグ（カンマ区切りで入力）",
@@ -614,22 +591,25 @@ if menu == "追加":
         if word.strip() == "":
             st.warning("単語を入力してください")
         else:
-            add_memory(word, final_description, tags, importance)
+            with st.spinner("保存中です。AIクイズも作成しています..."):
+                add_memory(word, final_description, tags, importance)
+
+                memories = load_memories()
+                latest_memory = max(memories, key=lambda m: m["id"])
+
+                quiz_data = generate_quiz(word, final_description)
+                update_memory_quiz(
+                    latest_memory["id"],
+                    quiz_data
+                )
 
             if st.session_state.get("use_ai_data"):
                 memories = load_memories()
-                latest_memory = memories[-1]
+                latest_memory = max(memories, key=lambda m: m["id"])
                 update_memory_ai(
                     latest_memory["id"],
                     st.session_state.ai_data,
                     st.session_state.user_one_line
-                )
-            if st.session_state.get("ai_quiz"):
-                memories = load_memories()
-                latest_memory = memories[-1]
-                update_memory_quiz(
-                    latest_memory["id"],
-                    st.session_state.ai_quiz
                 )
 
             st.success("保存しました")
@@ -637,7 +617,6 @@ if menu == "追加":
             st.session_state.pop("use_ai_data", None)
             st.session_state.pop("ai_card_adopted", None)
             st.session_state.pop("user_one_line", None)
-            st.session_state.pop("ai_quiz", None)
 
             st.session_state.clear_count += 1
             st.rerun()
@@ -788,6 +767,25 @@ elif menu == "編集":
 # ---------- 復習 ----------
 elif menu == "復習":
     st.subheader("今日の復習")
+    st.info("単語を見て、それが何か説明できるように思い出してください。")
+
+    with st.expander("復習機能の使い方"):
+        st.markdown("""
+    復習機能では、「追加」機能で単語を追加した日から、エビングハウスの忘却曲線を参考にして、
+
+    - 0日後
+    - 1日後
+    - 3日後
+    - 7日後
+    - 30日後
+
+    の周期で復習カードが表示されます。
+
+    単語を見て、それが何か説明できるか思い出してください。
+
+    **「答えを見る」** ボタンを押した後、  
+    **「覚えてた」** または **「忘れてた」** のどちらかを押してください。
+    """)
 
     memories = load_memories()
     today = datetime.now(JST).date()
@@ -869,6 +867,24 @@ elif menu == "復習":
 # ---------- AIクイズ ----------
 elif menu == "AIクイズ":
     st.subheader("AIクイズ")
+    st.info("追加機能で保存した単語カードには、自動でAIクイズが作成されます。")
+
+    with st.expander("AIクイズの使い方"):
+        st.markdown("""
+    AIクイズでは、追加した単語カードから自動生成された問題がランダムに出題されます。
+
+    タグと重要度を使って、出題範囲を変更できます。
+
+    例えば、
+
+    - 任意のタグだけ出題する
+    - 重要度3以上だけ出題する
+    - 特定の分野だけ復習する
+
+    といった使い方ができます。
+
+    問題を見て答えを思い出し、必要に応じて **ヒントを見る**、**答えを見る** を押してください。
+    """)
 
     memories = load_memories()
 
