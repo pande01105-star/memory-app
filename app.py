@@ -180,6 +180,18 @@ def load_today_reviewed_memory_ids():
 
     return [log["memory_id"] for log in response.data]
 
+def add_feedback(category, content):
+    user_id = st.session_state.user.id
+    email = st.session_state.user.email
+
+    supabase.table("feedbacks").insert({
+        "user_id": user_id,
+        "email": email,
+        "created_at": datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S"),
+        "category": category,
+        "content": content
+    }).execute()
+
 def summarize_memory(word, description):
     prompt = f"""
 あなたは記憶術に詳しい学習アシスタントです。
@@ -397,12 +409,23 @@ menu = st.sidebar.selectbox(
         "統計",
         "AI要約",
         "編集",
-        "削除"
+        "削除",
+        "フィードバック"
     ],
     key="main_menu"
 )
 
 # ---------- アプリ説明 ----------
+st.write("### 今日の状況")
+
+col1, col2 = st.columns(2)
+col1.metric("今日の復習", f"{today_review_count}件")
+col2.metric("総メモ数", len(load_memories()))
+
+if today_review_count > 0:
+    st.warning("今日の復習があります。復習ページを開いて確認してください。")
+else:
+    st.success("今日の復習はありません。")
 if menu == "アプリ説明":
     st.subheader("Memory App β版")
     st.warning("ページ更新をするとログイン状態が切れる場合があります。その場合は再ログインしてください。")
@@ -743,6 +766,65 @@ elif menu == "一覧":
                         st.write(m.get("ai_quiz_answer"))
                     else:
                         st.write("AIクイズはありません")
+                
+                with st.expander("関連メモを見る"):
+
+                    current_tags = [
+                        t.strip()
+                        for t in (m.get("tags") or "").split(",")
+                        if t.strip()
+                    ]
+
+                    related = []
+
+                    for other in memories:
+
+                        if other["id"] == m["id"]:
+                            continue
+
+                        other_tags = [
+                            t.strip()
+                            for t in (other.get("tags") or "").split(",")
+                            if t.strip()
+                        ]
+
+                        if set(current_tags) & set(other_tags):
+                            related.append(other)
+
+                    if related:
+                        for r in related[:5]:
+                            st.write(
+                                f"• {r['word']} "
+                                f"({r.get('tags') or 'なし'})"
+                            )
+                    else:
+                        st.write("関連メモなし")
+
+                if st.button(
+                    "AIクイズ再生成",
+                    key=f"regen_quiz_{m['id']}"
+                ):
+                    with st.spinner("生成中..."):
+                        quiz_data = generate_quiz(
+                            m["word"],
+                            m.get("description") or ""
+                        )
+
+                        update_memory_quiz(
+                            m["id"],
+                            quiz_data
+                        )
+
+                    st.success("再生成しました")
+                    st.rerun()
+
+                if st.button(
+                    "削除",
+                    key=f"delete_list_{m['id']}"
+                ):
+                    delete_memory(m["id"])
+                    st.success("削除しました")
+                    st.rerun()
 
                 st.caption(
                     f"⭐{m.get('importance') or 3} | "
@@ -1092,6 +1174,18 @@ elif menu == "統計":
             if (m.get("importance") or 3) == level
         ])
         st.write(f"⭐{level}: {count}件")
+    
+    st.divider()
+    st.write("### 最近忘れたメモ")
+
+    forgot_logs = [log for log in logs if log["result"] == "forgot"]
+
+    forgot_memory_ids = [log["memory_id"] for log in forgot_logs[-10:]]
+
+    for memory_id in forgot_memory_ids:
+        target = next((m for m in memories if m["id"] == memory_id), None)
+        if target:
+            st.write(f"- {target['word']}｜タグ: {target.get('tags') or 'なし'}")
 
 
 # ---------- AI要約 ----------
@@ -1178,3 +1272,21 @@ elif menu == "削除":
             delete_memory(memory_id)
             st.success("削除しました")
             st.rerun()
+
+elif menu == "フィードバック":
+    st.subheader("感想・不具合報告")
+    st.info("使ってみた感想、不具合、改善してほしい点を送れます。")
+
+    category = st.selectbox(
+        "種類",
+        ["感想", "不具合", "改善案", "質問", "その他"]
+    )
+
+    content = st.text_area("内容")
+
+    if st.button("送信"):
+        if content.strip() == "":
+            st.warning("内容を入力してください")
+        else:
+            add_feedback(category, content)
+            st.success("送信しました。ありがとう！")
