@@ -332,7 +332,6 @@ if st.session_state.user is None:
     st.stop()
 
 st.sidebar.write(f"ログイン中: {st.session_state.user.email}")
-st.sidebar.caption("追加 → AI補助 → 復習 → AIクイズ の流れで使います。")
 
 
 if st.sidebar.button("ログアウト"):
@@ -453,6 +452,41 @@ AI理解カードを利用すると、
 # ---------- 追加 ----------
 if menu == "追加":
     st.subheader("メモ追加")
+    st.info("単語を見て説明を思い出せるようにするために、覚えたい単語を追加します。")
+
+    with st.expander("追加機能の使い方"):
+        st.markdown("""
+    ### パターン1：シンプルに登録する
+
+    **単語入力：** ニューラルネットワーク  
+    **説明入力：** 脳の神経回路の模倣  
+    → **保存**
+
+    ---
+
+    ### パターン2：AI理解カードを使って登録する
+
+    **単語入力：** ニューラルネットワーク  
+
+    AI補助欄の **「理解カードを作る」** を押す。
+
+    表示された
+
+    - 理解
+    - 例え話
+    - 補足
+
+    の内容を確認する。
+
+    その後、**自分の言葉で1行にまとめる**。
+
+    → **「理解カードを採用」**  
+    → **保存**
+
+    ---
+
+    保存前に **AIタグを作る** または **重要度を変更する** と、一覧・復習・AIクイズで見返す際に便利です。
+    """)
 
     if "clear_count" not in st.session_state:
         st.session_state.clear_count = 0
@@ -468,7 +502,7 @@ if menu == "追加":
     )
     st.divider()
     st.markdown("### AI補助")
-    st.caption("単語だけでも使えます。説明があると精度が上がります。")
+    st.caption("AI補助は入力した単語や説明をもとに、理解カード・タグ・クイズを作成します。")
 
     if st.button("理解カードを作る"):
         if word.strip() == "":
