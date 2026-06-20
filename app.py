@@ -704,20 +704,19 @@ if menu == "追加":
 elif menu == "一覧":
     st.subheader("メモ一覧")
 
+    memories = load_memories()
     logs = load_review_logs()
 
-    memories = load_memories()
-
     sort_type = st.selectbox(
-    "並び順",
-    [
-        "新しい順",
-        "古い順",
-        "忘れやすい順",
-        "復習回数順",
-        "あいうえお順"
-    ]
-)
+        "並び順",
+        [
+            "新しい順",
+            "古い順",
+            "忘れやすい順",
+            "復習回数順",
+            "あいうえお順"
+        ]
+    )
 
     if sort_type == "新しい順":
         memories = sorted(
@@ -731,11 +730,13 @@ elif menu == "一覧":
             memories,
             key=lambda x: x["created_at"]
         )
+
     elif sort_type == "あいうえお順":
         memories = sorted(
             memories,
             key=lambda x: x["word"]
         )
+
     elif sort_type == "復習回数順":
 
         review_count = {}
@@ -752,35 +753,39 @@ elif menu == "一覧":
             key=lambda m: review_count.get(m["id"], 0),
             reverse=True
         )
+
     elif sort_type == "忘れやすい順":
 
         forgot_rate = {}
 
-        for m in memories:
+        for memory in memories:
 
             memory_logs = [
-                log for log in logs
-                if log["memory_id"] == m["id"]
+                log
+                for log in logs
+                if log["memory_id"] == memory["id"]
             ]
 
             total = len(memory_logs)
 
             forgot = len([
-                log for log in memory_logs
+                log
+                for log in memory_logs
                 if log["result"] == "forgot"
             ])
 
             if total > 0:
-                forgot_rate[m["id"]] = forgot / total
+                forgot_rate[memory["id"]] = forgot / total
             else:
-                forgot_rate[m["id"]] = 0
+                forgot_rate[memory["id"]] = 0
 
         memories = sorted(
             memories,
             key=lambda m: forgot_rate.get(m["id"], 0),
             reverse=True
         )
-        selected_tag = st.text_input("タグで絞り込み")
+
+    selected_tag = st.text_input("タグで絞り込み")
     if selected_tag:
         memories = [
             m for m in memories
@@ -969,6 +974,12 @@ elif menu == "一覧":
                         if st.button("削除をやめる", key=f"cancel_delete_{m['id']}"):
                             st.session_state.deleting_memory_id = None
                             st.rerun()
+
+                review_num = len([
+                    log
+                    for log in logs
+                    if log["memory_id"] == m["id"]
+                ])
 
                 st.caption(
                     f"⭐{m.get('importance') or 3} | "
