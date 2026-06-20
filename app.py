@@ -981,6 +981,9 @@ elif menu == "一覧":
                     if log["memory_id"] == m["id"]
                 ])
 
+                if sort_type == "復習回数順":
+                    st.info(f"📚 復習回数: {review_num}回")
+
                 st.caption(
                     f"⭐{m.get('importance') or 3} | "
                     f"タグ: {m.get('tags') or 'なし'} | "
@@ -1164,24 +1167,25 @@ elif menu == "AIクイズ":
 
     with st.expander("AIクイズの使い方"):
         st.markdown("""
-    AIクイズでは、追加した単語カードから自動生成された問題がランダムに出題されます。
+AIクイズでは、追加した単語カードから自動生成された問題が出題されます。
 
-    タグと重要度を使って、出題範囲を変更できます。
+出題形式は、
 
-    例えば、
+- ランダム
+- 苦手克服
 
-    - 任意のタグだけ出題する
-    - 重要度3以上だけ出題する
-    - 特定の分野だけ復習する
-
-    といった使い方ができます。
-
-    問題を見て答えを思い出し、必要に応じて **ヒントを見る**、**答えを見る** を押してください。
-    """)
+から選べます。
+""")
 
     memories = load_memories()
+    logs = load_review_logs()
 
     st.write("### 出題設定")
+
+    quiz_mode = st.radio(
+        "出題形式",
+        ["ランダム", "苦手克服"]
+    )
 
     tag_filter = st.text_input(
         "タグで絞り込み",
@@ -1203,29 +1207,64 @@ elif menu == "AIクイズ":
         and (m.get("importance") or 3) >= min_importance
     ]
 
+    def quiz_score(memory):
+        memory_logs = [
+            log for log in logs
+            if log["memory_id"] == memory["id"]
+        ]
+
+        total = len(memory_logs)
+
+        forgot = len([
+            log for log in memory_logs
+            if log["result"] == "forgot"
+        ])
+
+        importance = memory.get("importance") or 3
+
+        if total == 0:
+            forgot_rate = 0.5
+        else:
+            forgot_rate = forgot / total
+
+        return (
+            forgot_rate * 10
+            + importance
+            - total * 0.1
+        )
+
+    if quiz_mode == "苦手克服":
+        quiz_memories = sorted(
+            quiz_memories,
+            key=quiz_score,
+            reverse=True
+        )
+
     if not quiz_memories:
         st.info("条件に合うクイズがありません")
     else:
         import random
 
         if "quiz_index" not in st.session_state:
-            st.session_state.quiz_index = random.randint(
-                0,
-                len(quiz_memories) - 1
-            )
+            if quiz_mode == "ランダム":
+                st.session_state.quiz_index = random.randint(
+                    0,
+                    len(quiz_memories) - 1
+                )
+            else:
+                st.session_state.quiz_index = 0
 
         if st.session_state.quiz_index >= len(quiz_memories):
             st.session_state.quiz_index = 0
 
-        target = quiz_memories[
-            st.session_state.quiz_index
-        ]
+        target = quiz_memories[st.session_state.quiz_index]
 
         st.write("### 問題")
 
-        st.info(
-            target.get("ai_quiz_question", "")
-        )
+        if quiz_mode == "苦手克服":
+            st.caption("苦手克服モード：忘れやすさ・重要度・復習回数をもとに優先出題しています。")
+
+        st.info(target.get("ai_quiz_question", ""))
 
         quiz_id = target["id"]
 
@@ -1254,17 +1293,25 @@ elif menu == "AIクイズ":
 
             st.write("#### 元の単語")
             st.info(target.get("word", ""))
-        
+
         col1, col2 = st.columns(2)
 
         with col1:
             if st.button("覚えてた", key=f"quiz_remember_{target['id']}"):
                 add_review_log(target["id"], "remembered")
                 st.success("記録しました")
-                st.session_state.quiz_index = random.randint(
-                    0,
-                    len(quiz_memories) - 1
-                )
+
+                st.session_state[hint_key] = False
+                st.session_state[answer_key] = False
+
+                if quiz_mode == "ランダム":
+                    st.session_state.quiz_index = random.randint(
+                        0,
+                        len(quiz_memories) - 1
+                    )
+                else:
+                    st.session_state.quiz_index = 0
+
                 st.rerun()
 
         with col2:
@@ -1272,19 +1319,38 @@ elif menu == "AIクイズ":
                 add_review_log(target["id"], "forgot")
                 reset_review_cycle(target["id"])
                 st.warning("復習サイクルを今日からやり直します")
-                st.session_state.quiz_index = random.randint(
-                    0,
-                    len(quiz_memories) - 1
-                )
+
+                st.session_state[hint_key] = False
+                st.session_state[answer_key] = False
+
+                if quiz_mode == "ランダム":
+                    st.session_state.quiz_index = random.randint(
+                        0,
+                        len(quiz_memories) - 1
+                    )
+                else:
+                    st.session_state.quiz_index = 0
+
                 st.rerun()
 
         if st.button("次の問題", key=f"next_quiz_{quiz_id}"):
             st.session_state[hint_key] = False
             st.session_state[answer_key] = False
-            st.session_state.quiz_index = random.randint(
-                0,
-                len(quiz_memories) - 1
-            )
+
+            if quiz_mode == "ランダム":
+                st.session_state.quiz_index = random.randint(
+                    0,
+                    len(quiz_memories) - 1
+                )
+            else:
+                current_index = st.session_state.quiz_index
+                next_index = current_index + 1
+
+                if next_index >= len(quiz_memories):
+                    next_index = 0
+
+                st.session_state.quiz_index = next_index
+
             st.rerun()
 
 # ---------- 統計 ----------
