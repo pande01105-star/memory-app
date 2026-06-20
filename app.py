@@ -705,14 +705,20 @@ elif menu == "一覧":
     st.subheader("メモ一覧")
 
     memories = load_memories()
+
     selected_tag = st.text_input("タグで絞り込み")
     if selected_tag:
         memories = [
             m for m in memories
-            if selected_tag.lower()
-            in (m.get("tags") or "").lower()
+            if selected_tag.lower() in (m.get("tags") or "").lower()
         ]
-    min_importance = st.slider("重要度で絞り込み",min_value=1,max_value=5,value=1)
+
+    min_importance = st.slider(
+        "重要度で絞り込み",
+        min_value=1,
+        max_value=5,
+        value=1
+    )
 
     memories = [
         m for m in memories
@@ -753,7 +759,7 @@ elif menu == "一覧":
 
                 if m.get("ai_quiz_question"):
                     st.info("❓ AIクイズあり")
-                
+
                 with st.expander("AIクイズを見る"):
                     if m.get("ai_quiz_question"):
                         st.write("#### 【問題】")
@@ -766,9 +772,8 @@ elif menu == "一覧":
                         st.write(m.get("ai_quiz_answer"))
                     else:
                         st.write("AIクイズはありません")
-                
-                with st.expander("関連メモを見る"):
 
+                with st.expander("関連メモを見る"):
                     current_tags = [
                         t.strip()
                         for t in (m.get("tags") or "").split(",")
@@ -778,7 +783,6 @@ elif menu == "一覧":
                     related = []
 
                     for other in memories:
-
                         if other["id"] == m["id"]:
                             continue
 
@@ -800,130 +804,104 @@ elif menu == "一覧":
                     else:
                         st.write("関連メモなし")
 
-                if st.button(
-                    "AIクイズ再生成",
-                    key=f"regen_quiz_{m['id']}"
-                ):
-                    with st.spinner("生成中..."):
-                        quiz_data = generate_quiz(
-                            m["word"],
-                            m.get("description") or ""
-                        )
+                st.divider()
 
-                        update_memory_quiz(
-                            m["id"],
-                            quiz_data
-                        )
+                col1, col2, col3 = st.columns(3)
 
-                    st.success("再生成しました")
-                    st.rerun()
-
-                if st.button(
-                    "削除",
-                    key=f"delete_list_{m['id']}"
-                ):
-                    delete_memory(m["id"])
-                    st.success("削除しました")
-                    st.rerun()
-
-            st.divider()
-
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-                if st.button("編集", key=f"edit_card_{m['id']}"):
-                    st.session_state.editing_memory_id = m["id"]
-                    st.rerun()
-
-            with col2:
-                if st.button("クイズ再生成", key=f"regen_quiz_{m['id']}"):
-                    with st.spinner("AIクイズを作り直しています..."):
-                        quiz_data = generate_quiz(
-                            m["word"],
-                            m.get("description") or m.get("ai_one_line") or ""
-                        )
-                        update_memory_quiz(m["id"], quiz_data)
-
-                    st.success("AIクイズを再生成しました")
-                    st.rerun()
-
-            with col3:
-                if st.button("削除", key=f"delete_card_{m['id']}"):
-                    st.session_state.deleting_memory_id = m["id"]
-                    st.rerun()
-
-            if st.session_state.get("editing_memory_id") == m["id"]:
-                st.warning("このメモを編集中です")
-
-                new_word = st.text_input(
-                    "単語",
-                    value=m["word"],
-                    key=f"edit_word_{m['id']}"
-                )
-
-                new_description = st.text_area(
-                    "説明",
-                    value=m.get("description") or "",
-                    key=f"edit_description_{m['id']}"
-                )
-
-                new_tags = st.text_input(
-                    "タグ",
-                    value=m.get("tags") or "",
-                    key=f"edit_tags_{m['id']}"
-                )
-
-                new_importance = st.slider(
-                    "重要度",
-                    min_value=1,
-                    max_value=5,
-                    value=m.get("importance") or 3,
-                    key=f"edit_importance_{m['id']}"
-                )
-
-                col_save, col_cancel = st.columns(2)
-
-                with col_save:
-                    if st.button("保存", key=f"save_edit_{m['id']}"):
-                        update_memory(
-                            m["id"],
-                            new_word,
-                            new_description,
-                            new_tags,
-                            new_importance
-                        )
-                        st.session_state.editing_memory_id = None
-                        st.success("編集しました")
+                with col1:
+                    if st.button("編集", key=f"edit_card_{m['id']}"):
+                        st.session_state.editing_memory_id = m["id"]
                         st.rerun()
 
-                with col_cancel:
-                    if st.button("キャンセル", key=f"cancel_edit_{m['id']}"):
-                        st.session_state.editing_memory_id = None
+                with col2:
+                    if st.button("クイズ再生成", key=f"card_regen_quiz_{m['id']}"):
+                        with st.spinner("AIクイズを作り直しています..."):
+                            quiz_data = generate_quiz(
+                                m["word"],
+                                m.get("description") or m.get("ai_one_line") or ""
+                            )
+                            update_memory_quiz(m["id"], quiz_data)
+
+                        st.success("AIクイズを再生成しました")
                         st.rerun()
 
-            if st.session_state.get("deleting_memory_id") == m["id"]:
-                st.error("本当に削除しますか？この操作は戻せません。")
-
-                col_delete, col_cancel_delete = st.columns(2)
-
-                with col_delete:
-                    if st.button("完全に削除", key=f"confirm_delete_{m['id']}"):
-                        delete_memory(m["id"])
-                        st.session_state.deleting_memory_id = None
-                        st.success("削除しました")
+                with col3:
+                    if st.button("削除", key=f"delete_card_{m['id']}"):
+                        st.session_state.deleting_memory_id = m["id"]
                         st.rerun()
 
-                with col_cancel_delete:
-                    if st.button("削除をやめる", key=f"cancel_delete_{m['id']}"):
-                        st.session_state.deleting_memory_id = None
-                        st.rerun()
+                if st.session_state.get("editing_memory_id") == m["id"]:
+                    st.warning("このメモを編集中です")
+
+                    new_word = st.text_input(
+                        "単語",
+                        value=m["word"],
+                        key=f"edit_word_{m['id']}"
+                    )
+
+                    new_description = st.text_area(
+                        "説明",
+                        value=m.get("description") or "",
+                        key=f"edit_description_{m['id']}"
+                    )
+
+                    new_tags = st.text_input(
+                        "タグ",
+                        value=m.get("tags") or "",
+                        key=f"edit_tags_{m['id']}"
+                    )
+
+                    new_importance = st.slider(
+                        "重要度",
+                        min_value=1,
+                        max_value=5,
+                        value=m.get("importance") or 3,
+                        key=f"edit_importance_{m['id']}"
+                    )
+
+                    col_save, col_cancel = st.columns(2)
+
+                    with col_save:
+                        if st.button("保存", key=f"save_edit_{m['id']}"):
+                            update_memory(
+                                m["id"],
+                                new_word,
+                                new_description,
+                                new_tags,
+                                new_importance
+                            )
+                            st.session_state.editing_memory_id = None
+                            st.success("編集しました")
+                            st.rerun()
+
+                    with col_cancel:
+                        if st.button("キャンセル", key=f"cancel_edit_{m['id']}"):
+                            st.session_state.editing_memory_id = None
+                            st.rerun()
+
+                if st.session_state.get("deleting_memory_id") == m["id"]:
+                    st.error("本当に削除しますか？この操作は戻せません。")
+
+                    col_delete, col_cancel_delete = st.columns(2)
+
+                    with col_delete:
+                        if st.button("完全に削除", key=f"confirm_delete_{m['id']}"):
+                            delete_memory(m["id"])
+                            st.session_state.deleting_memory_id = None
+                            st.success("削除しました")
+                            st.rerun()
+
+                    with col_cancel_delete:
+                        if st.button("削除をやめる", key=f"cancel_delete_{m['id']}"):
+                            st.session_state.deleting_memory_id = None
+                            st.rerun()
 
                 st.caption(
                     f"⭐{m.get('importance') or 3} | "
                     f"タグ: {m.get('tags') or 'なし'} | "
                     f"作成日: {m['created_at']}"
-                )  
-
+                )
+                
 # ---------- 検索 ----------
 elif menu == "検索":
     st.subheader("メモ検索")
