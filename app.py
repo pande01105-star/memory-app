@@ -99,15 +99,21 @@ def add_memory(word, description, tags, importance):
     dt = datetime.now(JST)
     user_id = st.session_state.user.id
 
-    supabase.table("memories").insert({
-        "created_at": dt.strftime("%Y-%m-%d %H:%M:%S"),
-        "word": word,
-        "description": description,
-        "base_date": dt.strftime("%Y-%m-%d"),
-        "user_id": user_id,
-        "tags": tags,
-        "importance": importance
-    }).execute()
+    response = (
+        supabase.table("memories")
+        .insert({
+            "created_at": dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "word": word,
+            "description": description,
+            "base_date": dt.strftime("%Y-%m-%d"),
+            "user_id": user_id,
+            "tags": tags,
+            "importance": importance
+        })
+        .execute()
+    )
+
+    return response.data[0]
 
 def update_memory(memory_id, word, description, tags, importance):
     supabase.table("memories").update({
@@ -372,7 +378,7 @@ if st.session_state.user is None:
 
                     st.success("ログインしました")
                     st.rerun()
-                except Exception:
+                except Exception as e:
                     st.error("ログインに失敗しました。メールアドレスかパスワードを確認してください。")
                     st.write(e)
 
@@ -402,14 +408,11 @@ menu = st.sidebar.selectbox(
     [
         "アプリ説明",
         "追加",
-        "一覧",
+        "メモ管理",
         "検索",
         "復習",
         "AIクイズ",
         "統計",
-        "AI要約",
-        "編集",
-        "削除",
         "フィードバック"
     ],
     key="main_menu"
@@ -666,30 +669,22 @@ if menu == "追加":
 
     final_description = description
 
-    if st.button("保存"):
+        if st.button("保存"):
         if word.strip() == "":
             st.warning("単語を入力してください")
         else:
             with st.spinner("保存中です。AIクイズも作成しています..."):
-                add_memory(word, final_description, tags, importance)
-
-                memories = load_memories()
-                latest_memory = max(memories, key=lambda m: m["id"])
+                saved_memory = add_memory(word, final_description, tags, importance)
 
                 quiz_data = generate_quiz(word, final_description)
-                update_memory_quiz(
-                    latest_memory["id"],
-                    quiz_data
-                )
+                update_memory_quiz(saved_memory["id"], quiz_data)
 
-            if st.session_state.get("use_ai_data"):
-                memories = load_memories()
-                latest_memory = max(memories, key=lambda m: m["id"])
-                update_memory_ai(
-                    latest_memory["id"],
-                    st.session_state.ai_data,
-                    st.session_state.user_one_line
-                )
+                if st.session_state.get("use_ai_data"):
+                    update_memory_ai(
+                        saved_memory["id"],
+                        st.session_state.ai_data,
+                        st.session_state.user_one_line
+                    )
 
             st.success("保存しました")
             st.session_state.pop("ai_data", None)
@@ -701,7 +696,7 @@ if menu == "追加":
             st.rerun()
 
 # ---------- 一覧 ----------
-elif menu == "一覧":
+elif menu == "メモ管理":
     st.subheader("メモ一覧")
 
     memories = load_memories()
@@ -1018,148 +1013,6 @@ elif menu == "検索":
         else:
             st.info("該当なし")
 
-# ---------- 編集 ----------
-elif menu == "編集":
-    st.subheader("メモ編集")
-
-    memories = load_memories()
-
-    if not memories:
-        st.info("編集できるメモがありません")
-    else:
-        for i, m in enumerate(memories):
-            display_text = m.get("description") or m.get("ai_one_line") or "説明なし"
-
-            st.write(
-                f"{i}: ⭐{m.get('importance') or 3} | {m['word']} | {display_text} | タグ: {m.get('tags') or 'なし'}"
-            )
-
-        index = st.number_input("編集番号", step=1, min_value=0)
-
-        if 0 <= index < len(memories):
-            target = memories[int(index)]
-
-            new_word = st.text_input("編集後の単語", value=target["word"])
-            new_description = st.text_area("編集後の説明", value=target.get("description") or "")
-            new_tags = st.text_input("編集後のタグ", value=target.get("tags") or "")
-            new_importance = st.slider(
-                "編集後の重要度",
-                min_value=1,
-                max_value=5,
-                value=target.get("importance") or 3
-            )
-
-            if st.button("編集"):
-                if new_word.strip() == "":
-                    st.warning("単語を入力してください")
-                else:
-                    memory_id = target["id"]
-                    update_memory(memory_id, new_word, new_description, new_tags, new_importance)
-                    st.success("編集しました")
-                    st.rerun()
-        else:
-            st.error("存在しない番号です")
-
-# ---------- 復習 ----------
-elif menu == "復習":
-    st.subheader("今日の復習")
-    st.info("単語を見て、それが何か説明できるように思い出してください。")
-
-    with st.expander("復習機能の使い方"):
-        st.markdown("""
-    復習機能では、「追加」機能で単語を追加した日から、エビングハウスの忘却曲線を参考にして、
-
-    - 1日後
-    - 3日後
-    - 7日後
-    - 30日後
-
-    の周期で復習カードが表示されます。
-
-    単語を見て、それが何か説明できるか思い出してください。
-
-    **「答えを見る」** ボタンを押した後、  
-    **「覚えてた」** または **「忘れてた」** のどちらかを押してください。
-    """)
-
-    memories = load_memories()
-    today = datetime.now(JST).date()
-    today_reviewed_ids = load_today_reviewed_memory_ids()
-
-    review_days = [1, 3, 7, 30]
-    review_cards = []
-
-    for m in memories:
-        base_date = datetime.strptime(m["base_date"], "%Y-%m-%d").date()
-        days_passed = (today - base_date).days
-
-        if days_passed in review_days and m["id"] not in today_reviewed_ids:
-            review_cards.append(m | {"days_passed": days_passed})
-
-    if not review_cards:
-        st.info("今日復習するカードはありません")
-    else:
-        for i, m in enumerate(review_cards):
-            show_key = f"show_answer_{m['id']}"
-
-            if show_key not in st.session_state:
-                st.session_state[show_key] = False
-
-            with st.container(border=True):
-                st.markdown(f"### 問題 {i+1}")
-                st.caption(
-                    f"復習サイクル開始から {m['days_passed']} 日後 | "
-                    f"⭐{m.get('importance') or 3} | "
-                    f"タグ: {m.get('tags') or 'なし'}"
-                )
-                if m.get("ai_question"):
-                    st.info(f"思い出す問い：{m['ai_question']}")
-
-                st.markdown(f"## {m['word']}")
-
-                if st.button("答えを見る", key=f"answer_{m['id']}"):
-                    st.session_state[show_key] = True
-
-                if st.session_state[show_key]:
-                    if m.get("description"):
-                        st.write("#### 【自分の説明】")
-                        st.write(m["description"])
-
-                    if m.get("ai_one_line"):
-                        st.write("#### 【自分の言葉で1行】")
-                        st.write(m.get("ai_one_line"))
-
-                    if m.get("ai_understanding"):
-                        with st.expander("理解・例え話・補足を見る"):
-                            st.write("#### 【理解】")
-                            st.write(m.get("ai_understanding"))
-
-                            st.write("#### 【例え話】")
-                            st.write(m.get("ai_example"))
-
-                            st.write("#### 【補足】")
-                            st.write(m.get("ai_extra"))
-
-                    if not m.get("description") and not m.get("ai_one_line"):
-                        st.write("説明がありません")
-
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        if st.button("覚えてた", key=f"remember_{m['id']}"):
-                            add_review_log(m["id"], "remembered")
-                            st.session_state[show_key] = False
-                            st.success("OK。復習履歴に記録しました")
-                            st.rerun()
-
-                    with col2:
-                        if st.button("忘れてた", key=f"forgot_{m['id']}"):
-                            add_review_log(m["id"], "forgot")
-                            reset_review_cycle(m["id"])
-                            st.session_state[show_key] = False
-                            st.warning("復習サイクルを今日からやり直します")
-                            st.rerun()
-
 # ---------- AIクイズ ----------
 elif menu == "AIクイズ":
     st.subheader("AIクイズ")
@@ -1407,92 +1260,6 @@ elif menu == "統計":
         target = next((m for m in memories if m["id"] == memory_id), None)
         if target:
             st.write(f"- {target['word']}｜タグ: {target.get('tags') or 'なし'}")
-
-
-# ---------- AI要約 ----------
-elif menu == "AI要約":
-    st.subheader("AI要約")
-
-    memories = load_memories()
-
-    if not memories:
-        st.info("要約できるメモがありません")
-    else:
-        for i, m in enumerate(memories):
-            st.write(
-                f"{i}: ⭐{m.get('importance') or 3} | {m['word']} | タグ: {m.get('tags') or 'なし'}"
-            )
-
-        index = st.number_input(
-            "要約する番号",
-            step=1,
-            min_value=0,
-            max_value=len(memories) - 1
-        )
-
-        target = memories[int(index)]
-
-        st.markdown("### 元の説明")
-        st.write(target["description"])
-
-        if st.button("AIで要約する"):
-            with st.spinner("AIが要約中..."):
-                summary = summarize_memory(
-                    target["word"],
-                    target["description"]
-                )
-
-            st.session_state.ai_summary = summary
-
-        if "ai_summary" in st.session_state:
-            st.markdown("### AI要約結果")
-            st.write(st.session_state.ai_summary)
-
-            if st.button("この要約で説明を更新する"):
-                update_memory(
-                    target["id"],
-                    target["word"],
-                    st.session_state.ai_summary,
-                    target.get("tags") or "",
-                    target.get("importance") or 3
-                )
-                del st.session_state.ai_summary
-                st.success("説明をAI要約に更新しました")
-                st.rerun()
-
-# ---------- 削除 ----------
-elif menu == "削除":
-    st.subheader("メモ削除")
-
-    memories = load_memories()
-
-    if not memories:
-        st.info("削除できるメモがありません")
-    else:
-        for i, m in enumerate(memories):
-            display_text = m.get("description") or m.get("ai_one_line") or "説明なし"
-
-            with st.container(border=True):
-                st.markdown(f"### {i}: {m['word']}")
-                st.write(display_text)
-                st.caption(
-                    f"⭐{m.get('importance') or 3} | "
-                    f"タグ: {m.get('tags') or 'なし'} | "
-                    f"作成日: {m['created_at']}"
-                )
-
-        index = st.number_input(
-            "削除番号",
-            step=1,
-            min_value=0,
-            max_value=len(memories) - 1
-        )
-
-        if st.button("削除"):
-            memory_id = memories[int(index)]["id"]
-            delete_memory(memory_id)
-            st.success("削除しました")
-            st.rerun()
 
 elif menu == "フィードバック":
     st.subheader("感想・不具合報告")
