@@ -379,15 +379,11 @@ if st.sidebar.button("ログアウト"):
 today_review_count = count_today_reviews()
 
 if today_review_count > 0:
-    st.warning(f"今日の復習が {today_review_count} 件あります。")
+    st.sidebar.warning(f"🔥 今日の復習: {today_review_count}件")
 else:
-    st.success("今日の復習はありません。")
+    st.sidebar.success("今日の復習はありません")
 
-review_menu_label = (
-    f"🔥 復習（{today_review_count}件）"
-    if today_review_count > 0
-    else "復習"
-)
+review_menu_label = "復習"
 
 menu = st.sidebar.selectbox(
     "メニュー",
@@ -396,7 +392,7 @@ menu = st.sidebar.selectbox(
         "追加",
         "一覧",
         "検索",
-        review_menu_label,
+        "復習",
         "AIクイズ",
         "統計",
         "AI要約",
@@ -825,7 +821,7 @@ elif menu == "編集":
             st.error("存在しない番号です")
 
 # ---------- 復習 ----------
-elif menu == review_menu_label:
+elif menu == "復習":
     st.subheader("今日の復習")
     st.info("単語を見て、それが何か説明できるように思い出してください。")
 
@@ -914,7 +910,6 @@ elif menu == review_menu_label:
                             add_review_log(m["id"], "remembered")
                             st.session_state[show_key] = False
                             st.success("OK。復習履歴に記録しました")
-                            st.session_state.main_menu = review_menu_label
                             st.rerun()
 
                     with col2:
@@ -923,7 +918,6 @@ elif menu == review_menu_label:
                             reset_review_cycle(m["id"])
                             st.session_state[show_key] = False
                             st.warning("復習サイクルを今日からやり直します")
-                            st.session_state.main_menu = review_menu_label
                             st.rerun()
 
 # ---------- AIクイズ ----------
