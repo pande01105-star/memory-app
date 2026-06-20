@@ -75,6 +75,25 @@ def load_memories():
         st.write(e)
         return []
 
+def count_today_reviews():
+    memories = load_memories()
+    today = datetime.now(JST).date()
+    review_days = [1, 3, 7, 30]
+
+    count = 0
+
+    for m in memories:
+        try:
+            base_date = datetime.strptime(m["base_date"], "%Y-%m-%d").date()
+            days_passed = (today - base_date).days
+
+            if days_passed in review_days:
+                count += 1
+        except Exception:
+            pass
+
+    return count
+
 def add_memory(word, description, tags, importance):
     dt = datetime.now(JST)
     user_id = st.session_state.user.id
@@ -341,14 +360,39 @@ if st.sidebar.button("ログアウト"):
     st.session_state.refresh_token = None
     st.rerun()
 
+today_review_count = count_today_reviews()
+
+if today_review_count > 0:
+    st.warning(f"今日の復習が {today_review_count} 件あります。")
+else:
+    st.success("今日の復習はありません。")
+
+review_menu_label = (
+    f"🔥 復習（{today_review_count}件）"
+    if today_review_count > 0
+    else "復習"
+)
+
 menu = st.sidebar.selectbox(
     "メニュー",
-    ["アプリ説明", "追加", "一覧", "検索", "復習", "AIクイズ", "統計", "AI要約", "編集", "削除"]
+    [
+        "アプリ説明",
+        "追加",
+        "一覧",
+        "検索",
+        review_menu_label,
+        "AIクイズ",
+        "統計",
+        "AI要約",
+        "編集",
+        "削除"
+    ]
 )
 
 # ---------- アプリ説明 ----------
 if menu == "アプリ説明":
     st.subheader("Memory App β版")
+    st.warning("ページ更新をするとログイン状態が切れる場合があります。その場合は再ログインしてください。")
 
     st.markdown("""
 ### このアプリについて
@@ -384,7 +428,6 @@ AI理解カードを利用すると、
 
 エビングハウスの忘却曲線を参考に、
 
-- 0日後
 - 1日後
 - 3日後
 - 7日後
@@ -765,7 +808,7 @@ elif menu == "編集":
             st.error("存在しない番号です")
 
 # ---------- 復習 ----------
-elif menu == "復習":
+elif menu == review_menu_label:
     st.subheader("今日の復習")
     st.info("単語を見て、それが何か説明できるように思い出してください。")
 
@@ -773,7 +816,6 @@ elif menu == "復習":
         st.markdown("""
     復習機能では、「追加」機能で単語を追加した日から、エビングハウスの忘却曲線を参考にして、
 
-    - 0日後
     - 1日後
     - 3日後
     - 7日後
@@ -790,7 +832,7 @@ elif menu == "復習":
     memories = load_memories()
     today = datetime.now(JST).date()
 
-    review_days = [0, 1, 3, 7, 30]
+    review_days = [1, 3, 7, 30]
     review_cards = []
 
     for m in memories:
