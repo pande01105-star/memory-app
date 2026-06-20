@@ -669,31 +669,31 @@ if menu == "追加":
 
     final_description = description
 
-        if st.button("保存"):
-            if word.strip() == "":
-                st.warning("単語を入力してください")
-            else:
-                with st.spinner("保存中です。AIクイズも作成しています..."):
-                    saved_memory = add_memory(word, final_description, tags, importance)
+    if st.button("保存"):
+        if word.strip() == "":
+            st.warning("単語を入力してください")
+        else:
+            with st.spinner("保存中です。AIクイズも作成しています..."):
+                saved_memory = add_memory(word, final_description, tags, importance)
 
-                    quiz_data = generate_quiz(word, final_description)
-                    update_memory_quiz(saved_memory["id"], quiz_data)
+                quiz_data = generate_quiz(word, final_description)
+                update_memory_quiz(saved_memory["id"], quiz_data)
 
-                    if st.session_state.get("use_ai_data"):
-                        update_memory_ai(
-                            saved_memory["id"],
-                            st.session_state.ai_data,
-                            st.session_state.user_one_line
-                        )
+                if st.session_state.get("use_ai_data"):
+                    update_memory_ai(
+                        saved_memory["id"],
+                        st.session_state.ai_data,
+                        st.session_state.user_one_line
+                    )
 
-                st.success("保存しました")
-                st.session_state.pop("ai_data", None)
-                st.session_state.pop("use_ai_data", None)
-                st.session_state.pop("ai_card_adopted", None)
-                st.session_state.pop("user_one_line", None)
+            st.success("保存しました")
+            st.session_state.pop("ai_data", None)
+            st.session_state.pop("use_ai_data", None)
+            st.session_state.pop("ai_card_adopted", None)
+            st.session_state.pop("user_one_line", None)
 
-                st.session_state.clear_count += 1
-                st.rerun()
+            st.session_state.clear_count += 1
+            st.rerun()
 
 # ---------- 一覧 ----------
 elif menu == "メモ管理":
