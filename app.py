@@ -402,7 +402,8 @@ menu = st.sidebar.selectbox(
         "AI要約",
         "編集",
         "削除"
-    ]
+    ],
+    key="main_menu"
 )
 
 # ---------- アプリ説明 ----------
@@ -913,6 +914,7 @@ elif menu == review_menu_label:
                             add_review_log(m["id"], "remembered")
                             st.session_state[show_key] = False
                             st.success("OK。復習履歴に記録しました")
+                            st.session_state.main_menu = review_menu_label
                             st.rerun()
 
                     with col2:
@@ -921,6 +923,7 @@ elif menu == review_menu_label:
                             reset_review_cycle(m["id"])
                             st.session_state[show_key] = False
                             st.warning("復習サイクルを今日からやり直します")
+                            st.session_state.main_menu = review_menu_label
                             st.rerun()
 
 # ---------- AIクイズ ----------
