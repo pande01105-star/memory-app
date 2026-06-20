@@ -79,6 +79,7 @@ def count_today_reviews():
     memories = load_memories()
     today = datetime.now(JST).date()
     review_days = [1, 3, 7, 30]
+    today_reviewed_ids = load_today_reviewed_memory_ids()
 
     count = 0
 
@@ -87,7 +88,7 @@ def count_today_reviews():
             base_date = datetime.strptime(m["base_date"], "%Y-%m-%d").date()
             days_passed = (today - base_date).days
 
-            if days_passed in review_days:
+            if days_passed in review_days and m["id"] not in today_reviewed_ids:
                 count += 1
         except Exception:
             pass
@@ -163,6 +164,21 @@ def load_review_logs():
         .execute()
     )
     return response.data
+
+def load_today_reviewed_memory_ids():
+    user_id = st.session_state.user.id
+    today_text = datetime.now(JST).strftime("%Y-%m-%d")
+
+    response = (
+        supabase.table("review_logs")
+        .select("memory_id")
+        .eq("user_id", user_id)
+        .gte("reviewed_at", today_text + " 00:00:00")
+        .lte("reviewed_at", today_text + " 23:59:59")
+        .execute()
+    )
+
+    return [log["memory_id"] for log in response.data]
 
 def summarize_memory(word, description):
     prompt = f"""
@@ -831,6 +847,7 @@ elif menu == review_menu_label:
 
     memories = load_memories()
     today = datetime.now(JST).date()
+    today_reviewed_ids = load_today_reviewed_memory_ids()
 
     review_days = [1, 3, 7, 30]
     review_cards = []
@@ -839,7 +856,7 @@ elif menu == review_menu_label:
         base_date = datetime.strptime(m["base_date"], "%Y-%m-%d").date()
         days_passed = (today - base_date).days
 
-        if days_passed in review_days:
+        if days_passed in review_days and m["id"] not in today_reviewed_ids:
             review_cards.append(m | {"days_passed": days_passed})
 
     if not review_cards:
