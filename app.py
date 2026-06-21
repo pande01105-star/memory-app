@@ -391,7 +391,7 @@ def importance_label(importance):
         return "▫️ 周辺"
 
 # ---------- UI ----------
-st.title("Memory App")
+st.title("Memory App β v0.2")
 st.caption("理解 → 1行化 → 思い出す、の流れで覚えたいことを定着させる学習アプリです。")
 if st.session_state.user is None:
     st.subheader("ログイン / 新規登録")
@@ -1438,7 +1438,7 @@ elif menu == "メモリーツリー":
                     st.caption(
                         f"関連理由: {item.get('reason', '')}"
                     )
-                    
+
                     if st.button(
                         "この単語を追加候補にする",
                         key=f"select_related_word_{center_memory['id']}_{index}"
