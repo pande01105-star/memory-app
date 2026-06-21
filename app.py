@@ -378,6 +378,18 @@ JSON形式:
     text = response.output_text.strip()
     return json.loads(text)
 
+def importance_label(importance):
+    if importance >= 5:
+        return "🔥 最重要"
+    elif importance == 4:
+        return "⭐ 重要"
+    elif importance == 3:
+        return "🌱 基本"
+    elif importance == 2:
+        return "🔹 補助"
+    else:
+        return "▫️ 周辺"
+
 # ---------- UI ----------
 st.title("Memory App")
 st.caption("理解 → 1行化 → 思い出す、の流れで覚えたいことを定着させる学習アプリです。")
@@ -1409,14 +1421,24 @@ elif menu == "メモリーツリー":
                     icon = "▫️"
 
                 with st.container(border=True):
-                    st.markdown(f"### {icon} {item.get('word', '')}")
+                    label = importance_label(importance)
+
+                    st.markdown(f"### {label}：{item.get('word', '')}")
                     st.write(item.get("description", ""))
 
+                    if importance >= 5:
+                        st.error("最優先で覚える中核単語")
+                    elif importance == 4:
+                        st.warning("理解を深める重要単語")
+                    elif importance == 3:
+                        st.info("基本として押さえたい単語")
+                    else:
+                        st.caption("余裕があれば覚える周辺知識")
+
                     st.caption(
-                        f"重要度: {importance} | "
                         f"関連理由: {item.get('reason', '')}"
                     )
-
+                    
                     if st.button(
                         "この単語を追加候補にする",
                         key=f"select_related_word_{center_memory['id']}_{index}"
@@ -1568,7 +1590,7 @@ elif menu == "メモリーツリー":
                             f"タグ: {m.get('tags') or 'なし'}"
                         )
 
-                        
+
 # ---------- フィードバック ----------
 elif menu == "フィードバック":
     st.subheader("感想・不具合報告")
