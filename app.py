@@ -413,6 +413,7 @@ menu = st.sidebar.selectbox(
         "復習",
         "AIクイズ",
         "統計",
+        "メモリーツリー",
         "フィードバック"
     ],
     key="main_menu"
@@ -1261,6 +1262,100 @@ elif menu == "統計":
         if target:
             st.write(f"- {target['word']}｜タグ: {target.get('tags') or 'なし'}")
 
+# ---------- メモリーツリー ----------
+elif menu == "メモリーツリー":
+    st.subheader("メモリーツリー β")
+    st.info("中心メモを選ぶと、同じタグを持つ関連メモを表示します。")
+
+    memories = load_memories()
+
+    if not memories:
+        st.info("メモがありません。まずはメモを追加してください。")
+    else:
+        memory_options = {
+            f"{m['word']}｜タグ: {m.get('tags') or 'なし'}": m
+            for m in memories
+        }
+
+        selected_label = st.selectbox(
+            "中心にするメモを選択",
+            list(memory_options.keys())
+        )
+
+        center_memory = memory_options[selected_label]
+
+        center_tags = [
+            t.strip()
+            for t in (center_memory.get("tags") or "").split(",")
+            if t.strip()
+        ]
+
+        st.divider()
+
+        st.markdown("## 中心メモ")
+
+        with st.container(border=True):
+            st.markdown(f"### 🧠 {center_memory['word']}")
+            st.write(center_memory.get("description") or "説明なし")
+
+            if center_memory.get("ai_one_line"):
+                st.info(f"1行化：{center_memory.get('ai_one_line')}")
+
+            st.caption(
+                f"⭐{center_memory.get('importance') or 3} | "
+                f"タグ: {center_memory.get('tags') or 'なし'}"
+            )
+
+        st.divider()
+
+        if not center_tags:
+            st.warning("このメモにはタグがありません。関連メモを探すにはタグが必要です。")
+        else:
+            related_memories = []
+
+            for m in memories:
+                if m["id"] == center_memory["id"]:
+                    continue
+
+                other_tags = [
+                    t.strip()
+                    for t in (m.get("tags") or "").split(",")
+                    if t.strip()
+                ]
+
+                common_tags = list(set(center_tags) & set(other_tags))
+
+                if common_tags:
+                    related_memories.append({
+                        "memory": m,
+                        "common_tags": common_tags
+                    })
+
+            st.markdown("## 関連メモ")
+
+            if not related_memories:
+                st.info("同じタグを持つ関連メモはありません。")
+            else:
+                st.success(f"{len(related_memories)}件の関連メモが見つかりました。")
+
+                for item in related_memories:
+                    m = item["memory"]
+                    common_tags = item["common_tags"]
+
+                    with st.container(border=True):
+                        st.markdown(f"### 🔗 {m['word']}")
+                        st.write(m.get("description") or "説明なし")
+
+                        if m.get("ai_one_line"):
+                            st.info(f"1行化：{m.get('ai_one_line')}")
+
+                        st.caption(
+                            f"⭐{m.get('importance') or 3} | "
+                            f"共通タグ: {', '.join(common_tags)} | "
+                            f"タグ: {m.get('tags') or 'なし'}"
+                        )
+
+# ---------- フィードバック ----------
 elif menu == "フィードバック":
     st.subheader("感想・不具合報告")
     st.info("使ってみた感想、不具合、改善してほしい点を送れます。")
