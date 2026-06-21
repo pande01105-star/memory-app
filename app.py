@@ -321,6 +321,63 @@ JSON形式:
     text = response.output_text.strip()
     return json.loads(text)
 
+def generate_related_words(word, description, tags):
+    description_text = description.strip() if description else "説明なし"
+    tags_text = tags.strip() if tags else "タグなし"
+
+    prompt = f"""
+あなたは学習メモアプリのメモリーツリー生成AIです。
+
+次の中心単語から、学習に役立つ関連単語を8個生成してください。
+
+必ずJSONだけで返してください。
+説明文やコードブロックは禁止です。
+
+JSON形式:
+{{
+  "related_words": [
+    {{
+      "word": "関連単語",
+      "description": "短い説明",
+      "importance": 1,
+      "reason": "中心単語と関連する理由"
+    }}
+  ]
+}}
+
+条件:
+- 日本語
+- importance は 1〜5
+- 5は最重要、1は周辺知識
+- 中心単語そのものは含めない
+- 初学者が学習範囲を広げやすい単語にする
+- 重要度が高い単語を優先する
+- description は短くわかりやすく
+- reason は一文で書く
+
+中心単語:
+{word}
+
+中心単語の説明:
+{description_text}
+
+タグ:
+{tags_text}
+"""
+
+    response = openai_client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt,
+        text={
+            "format": {
+                "type": "json_object"
+            }
+        }
+    )
+
+    text = response.output_text.strip()
+    return json.loads(text)
+
 # ---------- UI ----------
 st.title("Memory App")
 st.caption("理解 → 1行化 → 思い出す、の流れで覚えたいことを定着させる学習アプリです。")
@@ -1305,6 +1362,58 @@ elif menu == "メモリーツリー":
                 f"⭐{center_memory.get('importance') or 3} | "
                 f"タグ: {center_memory.get('tags') or 'なし'}"
             )
+
+                st.markdown("## AI関連単語生成")
+
+        if st.button("AIで関連単語を生成"):
+            with st.spinner("AIが関連単語を考えています..."):
+                related_data = generate_related_words(
+                    center_memory["word"],
+                    center_memory.get("description") or center_memory.get("ai_one_line") or "",
+                    center_memory.get("tags") or ""
+                )
+
+                st.session_state.related_words_data = related_data
+                st.session_state.related_words_center_id = center_memory["id"]
+
+            st.rerun()
+
+        if (
+            st.session_state.get("related_words_data")
+            and st.session_state.get("related_words_center_id") == center_memory["id"]
+        ):
+            related_words = st.session_state.related_words_data.get("related_words", [])
+
+            st.write("### AIが提案した関連単語")
+
+            related_words = sorted(
+                related_words,
+                key=lambda x: x.get("importance", 3),
+                reverse=True
+            )
+
+            for item in related_words:
+                importance = item.get("importance", 3)
+
+                if importance >= 5:
+                    icon = "🔥"
+                elif importance == 4:
+                    icon = "⭐"
+                elif importance == 3:
+                    icon = "🌱"
+                elif importance == 2:
+                    icon = "🔹"
+                else:
+                    icon = "▫️"
+
+                with st.container(border=True):
+                    st.markdown(f"### {icon} {item.get('word', '')}")
+                    st.write(item.get("description", ""))
+
+                    st.caption(
+                        f"重要度: {importance} | "
+                        f"関連理由: {item.get('reason', '')}"
+                    )
 
         st.divider()
 
