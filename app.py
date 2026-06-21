@@ -1363,7 +1363,9 @@ elif menu == "メモリーツリー":
                 f"タグ: {center_memory.get('tags') or 'なし'}"
             )
 
-                st.markdown("## AI関連単語生成")
+        st.divider()
+
+        st.markdown("## AI関連単語生成")
 
         if st.button("AIで関連単語を生成"):
             with st.spinner("AIが関連単語を考えています..."):
@@ -1464,6 +1466,7 @@ elif menu == "メモリーツリー":
                             f"タグ: {m.get('tags') or 'なし'}"
                         )
 
+                        
 # ---------- フィードバック ----------
 elif menu == "フィードバック":
     st.subheader("感想・不具合報告")
