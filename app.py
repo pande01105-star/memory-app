@@ -1322,7 +1322,7 @@ elif menu == "統計":
 # ---------- メモリーツリー ----------
 elif menu == "メモリーツリー":
     st.subheader("メモリーツリー β")
-    st.info("中心メモを選ぶと、同じタグを持つ関連メモを表示します。")
+    st.info("中心メモからAIが関連単語を生成し、必要な単語をメモに追加できます。")
 
     memories = load_memories()
 
@@ -1348,7 +1348,6 @@ elif menu == "メモリーツリー":
         ]
 
         st.divider()
-
         st.markdown("## 中心メモ")
 
         with st.container(border=True):
@@ -1364,7 +1363,6 @@ elif menu == "メモリーツリー":
             )
 
         st.divider()
-
         st.markdown("## AI関連単語生成")
 
         if st.button("AIで関連単語を生成"):
@@ -1377,6 +1375,8 @@ elif menu == "メモリーツリー":
 
                 st.session_state.related_words_data = related_data
                 st.session_state.related_words_center_id = center_memory["id"]
+                st.session_state.selected_related_word = None
+                st.session_state.selected_related_ai_data = None
 
             st.rerun()
 
@@ -1394,7 +1394,7 @@ elif menu == "メモリーツリー":
                 reverse=True
             )
 
-            for item in related_words:
+            for index, item in enumerate(related_words):
                 importance = item.get("importance", 3)
 
                 if importance >= 5:
@@ -1416,6 +1416,108 @@ elif menu == "メモリーツリー":
                         f"重要度: {importance} | "
                         f"関連理由: {item.get('reason', '')}"
                     )
+
+                    if st.button(
+                        "この単語を追加候補にする",
+                        key=f"select_related_word_{center_memory['id']}_{index}"
+                    ):
+                        st.session_state.selected_related_word = item
+
+                        with st.spinner("AI理解カードを作っています..."):
+                            ai_data = summarize_memory(
+                                item.get("word", ""),
+                                item.get("description", "")
+                            )
+
+                        st.session_state.selected_related_ai_data = ai_data
+                        st.rerun()
+
+        if st.session_state.get("selected_related_word"):
+            selected_word = st.session_state.selected_related_word
+            selected_ai_data = st.session_state.get("selected_related_ai_data")
+
+            st.divider()
+            st.markdown("## 追加候補")
+
+            with st.container(border=True):
+                st.markdown(f"### 追加予定：{selected_word.get('word', '')}")
+                st.write(selected_word.get("description", ""))
+
+                if selected_ai_data:
+                    st.write("#### 【理解】")
+                    st.write(selected_ai_data.get("understanding", ""))
+
+                    st.write("#### 【例え話】")
+                    st.write(selected_ai_data.get("example", ""))
+
+                    st.write("#### 【補足】")
+                    st.write(selected_ai_data.get("extra", ""))
+
+                    st.write("#### 【思い出す問い】")
+                    st.write(selected_ai_data.get("question", ""))
+
+                user_one_line = st.text_input(
+                    "自分の言葉で1行化",
+                    placeholder="例：この単語を自分なりに一言で説明する",
+                    key=f"tree_one_line_{center_memory['id']}_{selected_word.get('word', '')}"
+                )
+
+                new_tags = st.text_input(
+                    "タグ",
+                    value=center_memory.get("tags") or "",
+                    key=f"tree_tags_{center_memory['id']}_{selected_word.get('word', '')}"
+                )
+
+                new_importance = st.slider(
+                    "重要度",
+                    min_value=1,
+                    max_value=5,
+                    value=selected_word.get("importance", 3),
+                    key=f"tree_importance_{center_memory['id']}_{selected_word.get('word', '')}"
+                )
+
+                col_save, col_cancel = st.columns(2)
+
+                with col_save:
+                    if st.button("メモに追加して復習サイクルへ入れる"):
+                        if user_one_line.strip() == "":
+                            st.warning("自分の言葉で1行化を入力してください")
+                        else:
+                            with st.spinner("メモに追加しています..."):
+                                saved_memory = add_memory(
+                                    selected_word.get("word", ""),
+                                    selected_word.get("description", ""),
+                                    new_tags,
+                                    new_importance
+                                )
+
+                                if selected_ai_data:
+                                    update_memory_ai(
+                                        saved_memory["id"],
+                                        selected_ai_data,
+                                        user_one_line
+                                    )
+
+                                quiz_data = generate_quiz(
+                                    selected_word.get("word", ""),
+                                    selected_word.get("description", "")
+                                )
+
+                                update_memory_quiz(
+                                    saved_memory["id"],
+                                    quiz_data
+                                )
+
+                            st.success("メモに追加しました。復習サイクルに入りました。")
+                            st.session_state.selected_related_word = None
+                            st.session_state.selected_related_ai_data = None
+                            st.rerun()
+
+                with col_cancel:
+                    if st.button("追加をやめる"):
+                        st.session_state.selected_related_word = None
+                        st.session_state.selected_related_ai_data = None
+                        st.rerun()
 
         st.divider()
 
@@ -1442,7 +1544,7 @@ elif menu == "メモリーツリー":
                         "common_tags": common_tags
                     })
 
-            st.markdown("## 関連メモ")
+            st.markdown("## 既存の関連メモ")
 
             if not related_memories:
                 st.info("同じタグを持つ関連メモはありません。")
