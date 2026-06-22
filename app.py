@@ -1083,6 +1083,95 @@ elif menu == "検索":
         else:
             st.info("該当なし")
 
+# ---------- 復習 ----------
+elif menu == "復習":
+    st.subheader("今日の復習")
+
+    memories = load_memories()
+    today = datetime.now(JST).date()
+    review_days = [1, 3, 7, 30]
+    today_reviewed_ids = load_today_reviewed_memory_ids()
+
+    review_cards = []
+
+    for m in memories:
+        try:
+            base_date = datetime.strptime(m["base_date"], "%Y-%m-%d").date()
+            days_passed = (today - base_date).days
+
+            if days_passed in review_days and m["id"] not in today_reviewed_ids:
+                review_cards.append(m | {"days_passed": days_passed})
+        except Exception:
+            pass
+
+    if not review_cards:
+        st.info("今日復習するカードはありません")
+    else:
+        st.success(f"今日の復習は {len(review_cards)} 件あります")
+
+        for m in review_cards:
+            with st.container(border=True):
+                st.markdown(f"### {m['word']}")
+                st.caption(f"{m['days_passed']}日後の復習")
+
+                if m.get("ai_question"):
+                    st.info(f"思い出す問い：{m.get('ai_question')}")
+                else:
+                    st.info("この単語の説明を思い出してみてください")
+
+                answer_key = f"show_review_answer_{m['id']}"
+
+                if answer_key not in st.session_state:
+                    st.session_state[answer_key] = False
+
+                if st.button("答えを見る", key=f"show_answer_{m['id']}"):
+                    st.session_state[answer_key] = True
+
+                if st.session_state[answer_key]:
+                    st.write("#### 答え")
+
+                    if m.get("description"):
+                        st.write(m["description"])
+
+                    if m.get("ai_one_line"):
+                        st.info(f"1行化：{m.get('ai_one_line')}")
+
+                    with st.expander("理解カードを見る"):
+                        if m.get("ai_understanding"):
+                            st.write("#### 【理解】")
+                            st.write(m.get("ai_understanding"))
+
+                            st.write("#### 【例え話】")
+                            st.write(m.get("ai_example"))
+
+                            st.write("#### 【補足】")
+                            st.write(m.get("ai_extra"))
+                        else:
+                            st.write("理解カードはありません")
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        if st.button("覚えてた", key=f"review_remember_{m['id']}"):
+                            add_review_log(m["id"], "remembered")
+                            st.session_state[answer_key] = False
+                            st.success("記録しました")
+                            st.rerun()
+
+                    with col2:
+                        if st.button("忘れてた", key=f"review_forgot_{m['id']}"):
+                            add_review_log(m["id"], "forgot")
+                            reset_review_cycle(m["id"])
+                            st.session_state[answer_key] = False
+                            st.warning("復習サイクルを今日からやり直します")
+                            st.rerun()
+
+                st.caption(
+                    f"⭐{m.get('importance') or 3} | "
+                    f"タグ: {m.get('tags') or 'なし'} | "
+                    f"作成日: {m.get('created_at')}"
+                )
+
 # ---------- AIクイズ ----------
 elif menu == "AIクイズ":
     st.subheader("AIクイズ")
